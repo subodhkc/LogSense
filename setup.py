@@ -12,23 +12,31 @@ CONFIG_PATH = "config"
 PLANS_PATH = "plans"
 DEFAULT_PLAN = "dash_test_plan.json"
 SOFTPAQ_PLAN = "softpaq_test_plan.json"
-#PRIVATE_API_KEY = "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"
+PRIVATE_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 # === File Loaders ===
 
 def load_json_file(path):
-    """Helper to load a JSON file."""
-    if os.path.exists(path):
+    """Helper to load a JSON file with robust error handling."""
+    if not os.path.exists(path):
+        return None
+    try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    return None
+    except (json.JSONDecodeError, IOError, UnicodeDecodeError) as e:
+        print(f"Warning: Failed to load JSON file {path}: {e}")
+        return None
 
 def load_yaml_file(path):
-    """Helper to load a YAML file."""
-    if os.path.exists(path):
+    """Helper to load a YAML file with robust error handling."""
+    if not os.path.exists(path):
+        return None
+    try:
         with open(path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
-    return None
+    except (yaml.YAMLError, IOError, UnicodeDecodeError) as e:
+        print(f"Warning: Failed to load YAML file {path}: {e}")
+        return None
 
 # === Redaction Rules ===
 
@@ -76,11 +84,17 @@ def get_available_test_plans():
     return [f for f in os.listdir(PLANS_PATH) if f.endswith((".json", ".yaml", ".yml"))]
 
 def load_custom_test_plan(file_obj):
-    """Load user-uploaded test plan."""
+    """Load user-uploaded test plan with robust error handling."""
+    if not file_obj or not hasattr(file_obj, 'name'):
+        return None
     try:
         if file_obj.name.endswith(".json"):
             return json.load(file_obj)
         elif file_obj.name.endswith((".yaml", ".yml")):
             return yaml.safe_load(file_obj)
-    except Exception:
+        else:
+            print(f"Warning: Unsupported file type: {file_obj.name}")
+            return None
+    except (json.JSONDecodeError, yaml.YAMLError, IOError) as e:
+        print(f"Warning: Failed to parse uploaded file {file_obj.name}: {e}")
         return None

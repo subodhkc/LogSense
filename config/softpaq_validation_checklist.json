@@ -1,0 +1,162 @@
+{
+  "validation_categories": {
+    "pre_install_requirements": {
+      "title": "Pre-Install Requirements",
+      "checks": [
+        {
+          "id": "os_compatibility",
+          "description": "Operating system compatibility verified",
+          "log_patterns": ["OS version", "Windows", "platform"],
+          "severity": "critical"
+        },
+        {
+          "id": "admin_rights",
+          "description": "Administrative rights available",
+          "log_patterns": ["access denied", "permission", "administrator"],
+          "severity": "critical"
+        },
+        {
+          "id": "disk_space",
+          "description": "Sufficient disk space available",
+          "log_patterns": ["disk space", "insufficient space", "storage"],
+          "severity": "high"
+        },
+        {
+          "id": "antivirus_disabled",
+          "description": "Antivirus temporarily disabled during install",
+          "log_patterns": ["antivirus", "virus scan", "security software"],
+          "severity": "medium"
+        }
+      ]
+    },
+    "installation_process": {
+      "title": "Installation Process",
+      "checks": [
+        {
+          "id": "download_integrity",
+          "description": "Package download completed successfully",
+          "log_patterns": ["download", "checksum", "integrity", "corrupt"],
+          "severity": "critical"
+        },
+        {
+          "id": "extraction_success",
+          "description": "Package extraction completed without errors",
+          "log_patterns": ["extract", "unzip", "decompress", "archive"],
+          "severity": "high"
+        },
+        {
+          "id": "driver_signing",
+          "description": "Driver signature validation passed",
+          "log_patterns": ["signature", "signed", "certificate", "trust"],
+          "severity": "high"
+        },
+        {
+          "id": "service_stop_start",
+          "description": "Required services stopped/started correctly",
+          "log_patterns": ["service", "stopped", "started", "running"],
+          "severity": "medium"
+        }
+      ]
+    },
+    "system_validation": {
+      "title": "System Validation",
+      "checks": [
+        {
+          "id": "hardware_detection",
+          "description": "Target hardware properly detected",
+          "log_patterns": ["hardware", "device", "PCI", "USB", "detected"],
+          "severity": "critical"
+        },
+        {
+          "id": "registry_updates",
+          "description": "Registry entries updated successfully",
+          "log_patterns": ["registry", "HKEY", "RegSetValue", "RegOpenKey"],
+          "severity": "medium"
+        },
+        {
+          "id": "file_placement",
+          "description": "Files copied to correct locations",
+          "log_patterns": ["copy", "file", "destination", "path"],
+          "severity": "medium"
+        },
+        {
+          "id": "reboot_required",
+          "description": "System reboot requirement handled",
+          "log_patterns": ["reboot", "restart", "pending restart"],
+          "severity": "low"
+        }
+      ]
+    },
+    "post_install_validation": {
+      "title": "Post-Install Validation",
+      "checks": [
+        {
+          "id": "driver_loaded",
+          "description": "Driver successfully loaded and functional",
+          "log_patterns": ["driver loaded", "device manager", "functional"],
+          "severity": "critical"
+        },
+        {
+          "id": "version_verification",
+          "description": "Installed version matches expected",
+          "log_patterns": ["version", "build", "revision"],
+          "severity": "high"
+        },
+        {
+          "id": "functionality_test",
+          "description": "Basic functionality test passed",
+          "log_patterns": ["test", "functional", "working", "operational"],
+          "severity": "high"
+        },
+        {
+          "id": "error_free_operation",
+          "description": "No errors in post-install operation",
+          "log_patterns": ["error", "exception", "failure", "warning"],
+          "severity": "medium"
+        }
+      ]
+    },
+    "common_failure_points": {
+      "title": "Common Failure Points",
+      "checks": [
+        {
+          "id": "insufficient_privileges",
+          "description": "Installation ran with sufficient privileges",
+          "log_patterns": ["access denied", "privilege", "elevation"],
+          "severity": "critical"
+        },
+        {
+          "id": "conflicting_software",
+          "description": "No conflicting software detected",
+          "log_patterns": ["conflict", "already installed", "version mismatch"],
+          "severity": "high"
+        },
+        {
+          "id": "network_connectivity",
+          "description": "Network connectivity available for downloads",
+          "log_patterns": ["network", "connection", "timeout", "unreachable"],
+          "severity": "medium"
+        },
+        {
+          "id": "system_resources",
+          "description": "Adequate system resources available",
+          "log_patterns": ["memory", "CPU", "resource", "busy"],
+          "severity": "medium"
+        }
+      ]
+    }
+  },
+  "validation_rules": {
+    "pass_criteria": {
+      "critical": "All critical checks must pass",
+      "high": "At least 80% of high severity checks must pass",
+      "medium": "At least 70% of medium severity checks must pass",
+      "low": "At least 50% of low severity checks must pass"
+    },
+    "failure_escalation": {
+      "critical_failures": "Immediate escalation required",
+      "multiple_high_failures": "Review and remediation needed",
+      "pattern_failures": "Systematic issue investigation required"
+    }
+  }
+}

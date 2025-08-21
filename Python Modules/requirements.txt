@@ -1,0 +1,7 @@
+python-evtx
+pyyaml
+pandas
+lxml
+scikit-learn
+drain3
+plotly

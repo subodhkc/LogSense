@@ -1,0 +1,40 @@
+name: Nightly-Train
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # weekly Monday 08:00 UTC
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install accelerate
+      - name: Build dataset
+        run: |
+          python scripts/build_dataset.py
+      - name: Check dataset size
+        id: ds
+        run: |
+          if [ -f data/training/phi2_pairs.jsonl ]; then
+            LINES=$(wc -l < data/training/phi2_pairs.jsonl)
+          else
+            LINES=0
+          fi
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+      - name: Train LoRA (small budget)
+        if: ${{ steps.ds.outputs.lines && fromJSON(steps.ds.outputs.lines) > 10 }}
+        run: |
+          accelerate launch scripts/train_phi2_lora.py --data data/training/phi2_pairs.jsonl --epochs 1 --batch 1 --output adapters/phi2-lora
+      - name: Upload adapters
+        if: ${{ steps.ds.outputs.lines && fromJSON(steps.ds.outputs.lines) > 10 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: phi2-lora
+          path: adapters/phi2-lora

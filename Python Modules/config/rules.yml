@@ -1,0 +1,29 @@
+# Placeholder for signature matching rules
+# === AUTHENTICATION FAILURES ===
+auth_failed: "authentication failed|login failed|invalid credentials"
+unauthorized_access: "unauthorized access|permission denied|access is denied"
+
+# === NETWORK ISSUES ===
+dns_failure: "could not resolve host|dns lookup failed"
+connection_timeout: "connection timed out|request timed out after \\d+ ms"
+network_unreachable: "network is unreachable|no route to host"
+
+# === DISK & IO ERRORS ===
+disk_error: "disk read error|I/O error|sector \\d+ failure"
+out_of_space: "no space left on device|disk quota exceeded"
+
+# === SERVICE & PROCESS FAILURES ===
+service_crash: "service .*? terminated unexpectedly|application crashed"
+process_killed: "killed process .*? due to .*?"
+
+# === INSTALLER / MSI ERRORS ===
+msi_error_1603: "error 1603|fatal error during installation"
+msi_return_value_3: "return value 3"
+
+# === SYSTEM EVENTS ===
+reboot_triggered: "system reboot initiated|restart required"
+shutdown_event: "shutdown has been initiated|system is shutting down"
+
+# === SECURITY EVENTS ===
+audit_failure: "audit failure|security audit failed"
+suspicious_exec: "executed suspicious command|powershell .* -enc .*"

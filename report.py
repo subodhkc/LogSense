@@ -23,19 +23,30 @@ def add_chart_image(pdf, fig, title):
     pdf.image(buf, x=10, y=25, w=180)
     plt.close(fig)
 
-def generate_pdf(events, metadata, test_results, recommendations, user_name, app_name, ai_summary=None):
+def generate_pdf(events, metadata, test_results, recommendations, user_name, app_name, ai_summary=None, user_context=None):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Title & Metadata
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, sanitize("SKC Log Reader Report"), ln=True, align='C')
+    pdf.cell(0, 10, sanitize("LogSense Report"), ln=True, align='C')
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, sanitize(f"Generated for: {user_name}"), ln=True)
     pdf.set_font("Arial", '', 10)
     pdf.cell(0, 8, sanitize(f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"), ln=True)
     pdf.cell(0, 8, sanitize(f"Application: {app_name}"), ln=True)
+    
+    # Add user context to report header
+    if user_context:
+        if user_context.get('app_version'):
+            pdf.cell(0, 8, sanitize(f"Version: {user_context['app_version']}"), ln=True)
+        if user_context.get('test_environment'):
+            pdf.cell(0, 8, sanitize(f"Environment: {user_context['test_environment']}"), ln=True)
+        if user_context.get('deployment_method'):
+            pdf.cell(0, 8, sanitize(f"Deployment: {user_context['deployment_method']}"), ln=True)
+        if user_context.get('issue_severity'):
+            pdf.cell(0, 8, sanitize(f"Issue Severity: {user_context['issue_severity']}"), ln=True)
     pdf.ln(5)
 
     # System Metadata
@@ -72,22 +83,46 @@ def generate_pdf(events, metadata, test_results, recommendations, user_name, app
             pdf.cell(0, 8, sanitize(line), ln=True)
         pdf.ln(5)
 
+    # User Context Section
+    if user_context and (user_context.get('issue_description') or user_context.get('build_changes')):
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, sanitize("Issue Context:"), ln=True)
+        pdf.set_font("Arial", '', 10)
+        if user_context.get('issue_description'):
+            pdf.multi_cell(0, 8, sanitize(f"Issue Description: {user_context['issue_description']}"))
+        if user_context.get('build_changes'):
+            pdf.multi_cell(0, 8, sanitize(f"Recent Changes: {user_context['build_changes']}"))
+        if user_context.get('reproduction_steps'):
+            pdf.multi_cell(0, 8, sanitize(f"Reproduction Steps: {user_context['reproduction_steps']}"))
+        pdf.ln(5)
+
     # Recommendations
     if recommendations:
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 10, sanitize("Recommendations:"), ln=True)
         pdf.set_font("Arial", '', 10)
-        for rec in recommendations:
+        
+        # Handle both old and new recommendation formats
+        rec_list = recommendations
+        if isinstance(recommendations, dict) and recommendations.get('recommendations'):
+            rec_list = recommendations['recommendations']
+            pdf.cell(0, 8, sanitize(f"Analysis Summary: {recommendations.get('rules_fired', 0)} rules fired"), ln=True)
+            pdf.ln(2)
+        
+        for rec in rec_list:
             if isinstance(rec, dict):
                 severity = rec.get("severity", "INFO")
                 message = rec.get("message", "")
-                step = rec.get("step", "N/A")
                 category = rec.get("category", "N/A")
-                line = f"- {severity}: {message} [Step: {step}, Category: {category}]"
+                action = rec.get("action", "")
+                line = f"- {severity}: {message} [Category: {category}]"
+                if action:
+                    line += f"\n  Action: {action}"
             else:
                 line = f"- {rec}"
-            pdf.cell(0, 8, sanitize(line), ln=True)
-        pdf.ln(5)
+            pdf.multi_cell(0, 8, sanitize(line))
+            pdf.ln(2)
+        pdf.ln(3)
 
     # AI Summary
     if ai_summary:

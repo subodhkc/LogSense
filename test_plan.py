@@ -30,16 +30,41 @@ def validate_plan(plan, events):
     """
     results = []
 
-    if not plan or not isinstance(plan, list):
+    if not plan:
+        return results
+    
+    # Handle both direct list and {"steps": [...]} format
+    steps = plan if isinstance(plan, list) else plan.get("steps", [])
+    
+    if not steps:
         return results
 
-    for idx, step in enumerate(plan):
-        step_text = step.get("Step Action") or step.get("[HPPM] Image System - DASH") or ""
-        expected = step.get("Expected Result") or step.get("") or ""
+    for idx, step in enumerate(steps):
+        # Support multiple field name formats
+        step_text = (
+            step.get("Step Action") or 
+            step.get("name") or 
+            step.get("[HPPM] Image System - DASH") or 
+            ""
+        )
+        expected = (
+            step.get("Expected Result") or 
+            step.get("expected") or 
+            ""
+        )
+        
+        # Enhanced matching using keywords if available
+        keywords = step.get("keywords", [])
         found = False
 
         for ev in events:
-            if step_text and step_text.lower() in ev.message.lower():
+            msg_lower = ev.message.lower()
+            # Check main step text
+            if step_text and step_text.lower() in msg_lower:
+                found = True
+                break
+            # Check keywords for better matching
+            if keywords and any(kw.lower() in msg_lower for kw in keywords if kw):
                 found = True
                 break
 

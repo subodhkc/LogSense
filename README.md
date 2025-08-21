@@ -1,6 +1,6 @@
-# SKC Log Reader
+# SKC Log Reader (Phi‑2)
 
-SKC Log Reader is a modular log analysis tool built using Python + Streamlit. Designed for TPMs and QA engineers, it helps identify root causes behind provisioning failures (BIOS, SoftPaqs, Fusion, OS mismatches, etc.) across Windows-based systems.
+SKC Log Reader is a modular log analysis tool built with Python + Streamlit. It helps TPMs and QA engineers triage provisioning/installer logs (BIOS, SoftPaq, MSI, imaging, agents) and produces concise RCA with optional LLM assistance.
 
 
 
@@ -13,23 +13,26 @@ SKC Log Reader is a modular log analysis tool built using Python + Streamlit. De
 - PDF report export (with visual summaries)
 - Optional LLM-powered analysis (offline or via OpenAI API)
 
-## 🧰 Setup Instructions
+## 🧰 Setup
 
 ### 1. Clone and Setup
 ```bash
-git clone https://github.com/your-repo/skc-log-reader.git
-cd skc-log-reader
 pip install -r requirements.txt
 ```
 
-### 2. Folder Structure
+### 2. Run
+```bash
+streamlit run skc_log_analyzer.py
 ```
-├── app.py
+
+### 3. Folder Structure (condensed)
+```
+├── skc_log_analyzer.py
 ├── analysis.py
 ├── redaction.py
 ├── test_plan.py
 ├── recommendations.py
-├── ai_rca.py
+├── ai_rca.py                # Hybrid AI RCA (offline Phi‑2 + OpenAI fallback)
 ├── report.py
 ├── setup.py
 ├── clustering_model.py
@@ -41,38 +44,43 @@ pip install -r requirements.txt
 │   ├── dash_test_plan.json
 │   └── softpaq_test_plan.json
 ├── config/
-│   └── redact.json  (optional)
+│   ├── redact.json
+│   └── model.yaml   # Phi‑2 config (model, generation params)
 ```
 
-### 3. Run Locally
-```bash
-streamlit run app.py
-```
 
-## 🔐 Security Notes
-- API keys are embedded securely in `setup.py` for private use only
-- Only **redacted** logs are sent to LLMs
-- All log parsing and visualization happen **locally**
+
+## 🔐 Security
+- Only redacted logs are sent to any external API (if enabled)
+- All parsing, analytics, and local LLM inference run locally
 
 ## 📦 Deployment
-You can host this on:
-- **Streamlit Cloud** (recommended for light usage)
-- **GitHub Pages** (for static version with limited features)
-- **Internal Server** for full control and offline models
+- Local: `streamlit run skc_log_analyzer.py`
+- Docker (CPU): build with the provided `Dockerfile`
 
-## 🧠 LLM Support
-- Offline model (e.g. transformers-based): Used for quick diagnostics
-- OpenAI API: Enabled optionally via checkbox. Uses redacted logs only
+## 🧠 LLM Support (Phi‑2 Migration)
+- Default offline model: Microsoft Phi‑2
+- Optional LoRA adapters auto-load from `adapters/phi2-lora`
+- OpenAI fallback supported if `OPENAI_API_KEY` is set
+
+Env/config overrides (also see `config/model.yaml`):
+- `MODEL_BACKEND`: `phi2` (default) or `legacy`
+- `MODEL_NAME`: default `microsoft/phi-2` (CI uses a tiny model)
+- `QUANTIZATION`: `none` | `8bit` | `4bit` (bitsandbytes; Linux recommended)
+- `MAX_NEW_TOKENS`, `TEMPERATURE`, `TOP_P`, `REPETITION_PENALTY`
 
 ---
 
 
 
 
+## UI Engine Toggles
+- Use Python Engines (rules, validations, summaries)
+- Use Local LLM (Phi‑2)
+- Use Cloud AI (OpenAI)
+
+These appear in the sidebar and control what is executed and rendered.
+
 ## Credits
-
-Built by Subodh Kc  
-Powered by Python, Streamlit, and open-source intelligence
-
-Footer in report: "Opensource Model Dev by Subodh Kc"
-"# skc_log_Analyzer" 
+Built by Subodh Kc
+Powered by Python, Streamlit, Transformers, and open‑source intelligence

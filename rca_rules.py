@@ -73,13 +73,68 @@ def detect_unsupported_hardware(events: List) -> str:
         return "Detected unsupported or incompatible hardware."
     return ""
 
-def get_all_rca_summaries(events: List, metadata: Dict) -> List[str]:
+def detect_version_mismatch(events: List, context: Dict) -> str:
+    """Detect version compatibility issues based on context"""
+    app_version = context.get("app_version", "").lower()
+    previous_version = context.get("previous_version", "").lower()
+    build_changes = context.get("build_changes", "").lower()
+    
+    version_issues = any(
+        "version mismatch" in ev.message.lower() or
+        "incompatible version" in ev.message.lower() or
+        "unsupported version" in ev.message.lower()
+        for ev in events
+    )
+    
+    if version_issues and (app_version or previous_version):
+        return f"Version compatibility issue detected. Current: {context.get('app_version', 'Unknown')}, Previous: {context.get('previous_version', 'Unknown')}"
+    
+    if "dependency" in build_changes and any("dependency" in ev.message.lower() for ev in events):
+        return "Dependency-related failure detected - likely related to recent build changes"
+    
+    return ""
+
+def detect_deployment_method_issues(events: List, context: Dict) -> str:
+    """Detect issues specific to deployment method"""
+    deployment_method = context.get("deployment_method", "").lower()
+    
+    if "dash" in deployment_method and any("dash" in ev.message.lower() and "fail" in ev.message.lower() for ev in events):
+        return "DASH imaging deployment failure detected"
+    
+    if "softpaq" in deployment_method and any("softpaq" in ev.message.lower() and "error" in ev.message.lower() for ev in events):
+        return "SoftPaq installation failure detected"
+    
+    if "silent" in deployment_method and any("user interaction" in ev.message.lower() or "prompt" in ev.message.lower() for ev in events):
+        return "Silent installation failed - user interaction required"
+    
+    return ""
+
+def detect_environment_specific_issues(events: List, context: Dict) -> str:
+    """Detect issues specific to test environment"""
+    environment = context.get("test_environment", "").lower()
+    
+    if environment == "production" and any("test" in ev.message.lower() or "debug" in ev.message.lower() for ev in events):
+        return "Test/debug artifacts detected in production environment"
+    
+    if environment in ["staging", "development"] and any("certificate" in ev.message.lower() and "invalid" in ev.message.lower() for ev in events):
+        return f"Certificate validation issues in {environment} environment"
+    
+    return ""
+
+def get_all_rca_summaries(events: List, metadata: Dict, context: Dict = None) -> List[str]:
+    """Enhanced RCA with user context"""
+    if context is None:
+        context = {}
+    
     summaries = [
         detect_os_incompatibility(events, metadata),
         detect_driver_conflict(events),
         detect_network_failure(events),
         detect_corrupt_media(events),
         detect_permission_issue(events),
-        detect_unsupported_hardware(events)
+        detect_unsupported_hardware(events),
+        detect_version_mismatch(events, context),
+        detect_deployment_method_issues(events, context),
+        detect_environment_specific_issues(events, context)
     ]
     return [s for s in summaries if s]

@@ -38,5 +38,33 @@
   {
     "pattern": "(?i)system model[:\\s]*[\\w\\s\\-]+",
     "replacement": "System Model: [REDACTED_MODEL]"
+  },
+  {
+    "pattern": "(?i)(authorization|auth)[:\\s]*bearer\\s+[A-Za-z0-9\\-\\._~\\+\\/]+=*",
+    "replacement": "Authorization: Bearer [REDACTED_TOKEN]"
+  },
+  {
+    "pattern": "(?i)(api[_-]?key|secret|token)[=:\\s]+[A-Za-z0-9_\\-]{8,}",
+    "replacement": "[REDACTED_SECRET]"
+  },
+  {
+    "pattern": "AKIA[0-9A-Z]{16}",
+    "replacement": "[REDACTED_AWS_ACCESS_KEY]"
+  },
+  {
+    "pattern": "(?i)aws_secret_access_key[=:\\s]+[A-Za-z0-9/+=]{40}",
+    "replacement": "[REDACTED_AWS_SECRET]"
+  },
+  {
+    "pattern": "\\b(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}\\b",
+    "replacement": "[REDACTED_IPV6]"
+  },
+  {
+    "pattern": "\\b(?:\\+?\\d{1,3}[-.\\s]?)?(?:\\(\\d{3}\\)|\\d{3})[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b",
+    "replacement": "[REDACTED_PHONE]"
+  },
+  {
+    "pattern": "\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14})\\b",
+    "replacement": "[REDACTED_CC]"
   }
 ]

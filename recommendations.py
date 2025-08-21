@@ -2,8 +2,31 @@
 recommendations.py - Rule-based RCA generation from log timeline
 """
 
-def generate_recommendations(events):
+def generate_recommendations(events, context=None):
     recs = []
+    context = context or {}
+
+    # Context-aware recommendations based on user input
+    if context.get("deployment_method") == "Silent Install" and context.get("issue_description"):
+        if "prompt" in context["issue_description"].lower() or "user interaction" in context["issue_description"].lower():
+            recs.append({
+                "severity": "High",
+                "message": "Silent installation requiring user interaction detected",
+                "category": "Deployment",
+                "timestamp": "Context-based",
+                "action": "Review silent install parameters and remove interactive components"
+            })
+    
+    if context.get("build_changes") and "dependency" in context.get("build_changes", "").lower():
+        dependency_errors = any("dependency" in ev.message.lower() or "missing" in ev.message.lower() for ev in events)
+        if dependency_errors:
+            recs.append({
+                "severity": "High",
+                "message": "Dependency issues correlate with recent build changes",
+                "category": "Build",
+                "timestamp": "Context-based",
+                "action": f"Review dependency changes: {context.get('build_changes', '')[:100]}..."
+            })
 
     for e in events:
         msg = e.message.lower()
