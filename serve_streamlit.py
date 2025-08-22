@@ -2,6 +2,7 @@
 import shlex, subprocess
 from pathlib import Path
 import os, time
+import socket, threading
 import modal
 
 APP_ENTRY_REMOTE = "/root/app/skc_log_analyzer.py"
@@ -35,14 +36,14 @@ app = modal.App(name="logsense-streamlit", image=image)
 
 # ECONOMIC GUARDRAILS (debug mode)
 ECON = dict(
-    timeout=300,  # increased for slow Streamlit startup
-    scaledown_window=2,  # kill idle containers quickly
-    min_containers=0,    # don't keep warm containers in tests
-    buffer_containers=0, # no prebuffering
+    timeout=300,          # generous to cover slow Streamlit startup
+    scaledown_window=600, # keep container warm longer during testing
+    min_containers=1,     # ensure at least one warm container
+    buffer_containers=0,  # no prebuffering
 )
 
 @app.function(**ECON)
-@modal.web_server(port=PORT, startup_timeout=180)
+@modal.web_server(port=PORT, startup_timeout=300)
 def run():
     import time
     import sys
@@ -60,21 +61,57 @@ def run():
     )
     
     print(f"[STREAMLIT] Starting: {cmd}", flush=True)
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    
-    # Give Streamlit more time to start and capture output
-    print("[WAIT] Waiting 10s for Streamlit boot...", flush=True)
-    time.sleep(10)
-    
-    # Check if Streamlit started successfully
-    if process.poll() is None:
-        print("[SUCCESS] Modal web server ready - Streamlit process running", flush=True)
+    process = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    # Stream logs from Streamlit in a background thread for visibility
+    def _pump_logs(proc: subprocess.Popen):
+        try:
+            assert proc.stdout is not None
+            for line in iter(proc.stdout.readline, ""):
+                if not line:
+                    break
+                print(f"[STREAMLIT] {line.rstrip()}", flush=True)
+        except Exception as e:
+            print(f"[LOG] Log pump error: {e}", flush=True)
+
+    threading.Thread(target=_pump_logs, args=(process,), daemon=True).start()
+
+    # Wait for TCP readiness on the bound port, with overall timeout
+    start = time.time()
+    deadline = start + 300  # seconds
+    print("[WAIT] Probing for port readiness on 127.0.0.1:{port}...".format(port=PORT), flush=True)
+    ready = False
+    while time.time() < deadline:
+        # If process died, surface the error
+        rc = process.poll()
+        if rc is not None:
+            print(f"[ERROR] Streamlit exited with code {rc} before readiness", flush=True)
+            # Drain remaining output
+            try:
+                out, _ = process.communicate(timeout=2)
+                if out:
+                    print(out, flush=True)
+            except Exception:
+                pass
+            return
+        try:
+            with socket.create_connection(("127.0.0.1", PORT), timeout=0.5):
+                ready = True
+                break
+        except OSError:
+            time.sleep(0.5)
+
+    if not ready:
+        print("[WARN] Port did not open within timeout; continuing to wait for process.", flush=True)
     else:
-        print("[ERROR] Streamlit process exited early", flush=True)
-        # Print any error output
-        output, _ = process.communicate()
-        if output:
-            print(f"Streamlit output: {output}", flush=True)
-    
-    # Keep function alive
+        print("[SUCCESS] Streamlit is listening; web server ready.", flush=True)
+
+    # Keep function alive while Streamlit runs
     process.wait()
