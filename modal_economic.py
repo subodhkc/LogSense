@@ -1,5 +1,5 @@
 # modal_economic.py — known-good Streamlit launcher for Modal
-import os, shlex, subprocess
+import os, shlex, subprocess, threading
 import modal
 from modal import FilePatternMatcher
 
@@ -35,18 +35,92 @@ def health():
 @app.function(**WEB_ECON)
 @modal.web_server(port=PORT, startup_timeout=300, label="run")
 def run():
+    import os
+    import sys
+    import subprocess
+    import time
+    
+    # Change to the app directory where files are mounted
+    os.chdir("/root/app")
+    
+    print(f"[MODAL] Python version: {sys.version}", flush=True)
+    print(f"[MODAL] Working directory: {os.getcwd()}", flush=True)
+    print(f"[MODAL] Files in directory: {os.listdir('.')}", flush=True)
+    print(f"[MODAL] APP_ENTRY: {APP_ENTRY}", flush=True)
+    print(f"[MODAL] APP_ENTRY exists: {os.path.exists(APP_ENTRY)}", flush=True)
+    
     os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
-    # optional stability knobs:
     os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
     os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
 
-    cmd = (
-        f"streamlit run {shlex.quote(APP_ENTRY)} "
-        f"--server.port {PORT} "
-        f"--server.address 0.0.0.0 "
-        f"--server.headless true "
-        f"--server.enableCORS false "
-        f"--server.enableXsrfProtection false"
-    )
-    proc = subprocess.Popen(cmd, shell=True)
-    proc.wait()  # <— CRITICAL: ties container lifecycle to the Streamlit process
+    # Test basic imports first
+    try:
+        import streamlit
+        print(f"[MODAL] Streamlit version: {streamlit.__version__}", flush=True)
+    except Exception as e:
+        print(f"[MODAL] ERROR: Cannot import streamlit: {e}", flush=True)
+        return
+
+    # Test if entry file can be imported
+    try:
+        print(f"[MODAL] Testing import of {APP_ENTRY}...", flush=True)
+        # Don't actually import, just check syntax
+        with open(APP_ENTRY, 'r') as f:
+            content = f.read()
+            compile(content, APP_ENTRY, 'exec')
+        print(f"[MODAL] {APP_ENTRY} syntax check passed", flush=True)
+    except Exception as e:
+        print(f"[MODAL] ERROR: {APP_ENTRY} has issues: {e}", flush=True)
+        return
+
+    cmd = [
+        "streamlit", "run", APP_ENTRY,
+        "--server.port", str(PORT),
+        "--server.address", "0.0.0.0",
+        "--server.headless", "true",
+        "--server.enableCORS", "false",
+        "--server.enableXsrfProtection", "false"
+    ]
+    
+    print(f"[MODAL] Starting command: {' '.join(cmd)}", flush=True)
+    
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1
+        )
+
+        print(f"[MODAL] Process started with PID: {proc.pid}", flush=True)
+
+        # Stream stdout/stderr in real time so Modal logs show Streamlit output
+        def _reader(pipe, prefix):
+            try:
+                for line in iter(pipe.readline, ''):
+                    if not line:
+                        break
+                    print(f"[MODAL][{prefix}] {line.rstrip()}", flush=True)
+            except Exception as e:
+                print(f"[MODAL] Reader error ({prefix}): {e}", flush=True)
+
+        t_out = threading.Thread(target=_reader, args=(proc.stdout, "STDOUT"), daemon=True)
+        t_err = threading.Thread(target=_reader, args=(proc.stderr, "STDERR"), daemon=True)
+        t_out.start(); t_err.start()
+
+        # Monitor for 30 seconds to see startup; if it exits early, return
+        start_time = time.time()
+        while time.time() - start_time < 30:
+            if proc.poll() is not None:
+                print(f"[MODAL] Process exited early with code: {proc.returncode}", flush=True)
+                return
+            time.sleep(1)
+            print(f"[MODAL] Process still running after {int(time.time() - start_time)}s", flush=True)
+
+        print(f"[MODAL] Streamlit appears to be starting, waiting indefinitely...", flush=True)
+        proc.wait()
+
+    except Exception as e:
+        print(f"[MODAL] ERROR starting subprocess: {e}", flush=True)
+        return
