@@ -1,8 +1,10 @@
 # serve_streamlit.py
 import shlex, subprocess
 from pathlib import Path
-import os, time
+import os, time, signal
 import socket, threading
+import requests
+import psutil
 import modal
 
 APP_ENTRY_REMOTE = "/root/app/skc_log_analyzer.py"
@@ -40,6 +42,8 @@ ECON = dict(
     scaledown_window=600, # keep container warm longer during testing
     min_containers=1,     # ensure at least one warm container
     buffer_containers=0,  # no prebuffering
+    memory=2048,          # allocate 2GB RAM to prevent OOM
+    cpu=2,                # allocate 2 CPU cores for better performance
 )
 
 @app.function(**ECON)
@@ -49,6 +53,23 @@ def run():
     import sys
     
     print("[MODAL] Web server starting...", flush=True)
+    
+    # Global process reference for signal handling
+    streamlit_process = None
+    
+    def signal_handler(signum, frame):
+        print(f"[SIGNAL] Received signal {signum}, forwarding to Streamlit...", flush=True)
+        if streamlit_process and streamlit_process.poll() is None:
+            streamlit_process.terminate()
+            try:
+                streamlit_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                streamlit_process.kill()
+        sys.exit(0)
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     
     # Start Streamlit bound to external iface and to the SAME port as web_server
     cmd = (
@@ -69,6 +90,7 @@ def run():
         text=True,
         bufsize=1,
     )
+    streamlit_process = process  # Store for signal handling
 
     # Stream logs from Streamlit in a background thread for visibility
     def _pump_logs(proc: subprocess.Popen):
@@ -83,10 +105,37 @@ def run():
 
     threading.Thread(target=_pump_logs, args=(process,), daemon=True).start()
 
-    # Wait for TCP readiness on the bound port, with overall timeout
+    # Memory watchdog thread
+    def _memory_watchdog():
+        try:
+            parent_pid = os.getpid()
+            while True:
+                try:
+                    parent_proc = psutil.Process(parent_pid)
+                    parent_rss = parent_proc.memory_info().rss / 1024 / 1024  # MB
+                    
+                    streamlit_rss = 0
+                    if streamlit_process and streamlit_process.poll() is None:
+                        try:
+                            streamlit_proc = psutil.Process(streamlit_process.pid)
+                            streamlit_rss = streamlit_proc.memory_info().rss / 1024 / 1024  # MB
+                        except psutil.NoSuchProcess:
+                            pass
+                    
+                    print(f"[MEM] Parent: {parent_rss:.1f}MB, Streamlit: {streamlit_rss:.1f}MB", flush=True)
+                    time.sleep(5)
+                except Exception as e:
+                    print(f"[MEM] Watchdog error: {e}", flush=True)
+                    time.sleep(10)
+        except Exception:
+            pass
+
+    threading.Thread(target=_memory_watchdog, daemon=True).start()
+
+    # Wait for HTTP health readiness on Streamlit's health endpoint
     start = time.time()
     deadline = start + 300  # seconds
-    print("[WAIT] Probing for port readiness on 127.0.0.1:{port}...".format(port=PORT), flush=True)
+    print("[WAIT] Probing for HTTP health on 127.0.0.1:{port}/_stcore/health...".format(port=PORT), flush=True)
     ready = False
     while time.time() < deadline:
         # If process died, surface the error
@@ -102,16 +151,18 @@ def run():
                 pass
             return
         try:
-            with socket.create_connection(("127.0.0.1", PORT), timeout=0.5):
+            response = requests.get(f"http://127.0.0.1:{PORT}/_stcore/health", timeout=1)
+            if response.status_code == 200 and "ok" in response.text.lower():
                 ready = True
                 break
-        except OSError:
-            time.sleep(0.5)
+        except Exception:
+            pass
+        time.sleep(0.5)
 
     if not ready:
-        print("[WARN] Port did not open within timeout; continuing to wait for process.", flush=True)
+        print("[WARN] Health endpoint did not respond within timeout; continuing to wait for process.", flush=True)
     else:
-        print("[SUCCESS] Streamlit is listening; web server ready.", flush=True)
+        print("[SUCCESS] Streamlit health check passed; web server ready.", flush=True)
 
     # Keep function alive while Streamlit runs
     process.wait()
