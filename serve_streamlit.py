@@ -29,15 +29,19 @@ app = modal.App(name="logsense-streamlit", image=image)
     min_containers=1,
     scaledown_window=600,  # Keep warm longer during debugging
 )
-@modal.web_server(port=PORT, startup_timeout=300)  # Increased from 120 to 300
+@modal.web_server(port=PORT, startup_timeout=60)  # Reduced timeout to fail fast
 def run():
-    """Simple Streamlit server - no complex subprocess management"""
+    """Direct Streamlit server - no subprocess"""
+    import streamlit.web.cli as stcli
+    import sys
     
-    print("[MODAL] Starting Streamlit server...", flush=True)
+    print("[MODAL] Starting Streamlit directly...", flush=True)
     
-    # Use subprocess.run() - blocks until Streamlit exits
-    subprocess.run([
-        "streamlit", "run", "skc_log_analyzer_fixed.py",
+    # Set Streamlit args directly
+    sys.argv = [
+        "streamlit",
+        "run",
+        "test_streamlit_basic.py",
         "--server.port", str(PORT),
         "--server.address", "0.0.0.0",
         "--server.headless", "true",
@@ -45,7 +49,17 @@ def run():
         "--server.enableXsrfProtection", "false",
         "--server.fileWatcherType", "none",
         "--browser.gatherUsageStats", "false"
-    ])
+    ]
+    
+    print(f"[MODAL] Streamlit args: {sys.argv}", flush=True)
+    
+    # Run Streamlit directly
+    try:
+        stcli.main()
+    except SystemExit as e:
+        print(f"[MODAL] Streamlit exited with: {e}", flush=True)
+        if e.code != 0:
+            raise
 
 # Health check endpoint for debugging
 @app.function(timeout=15)
