@@ -35,7 +35,7 @@ app = modal.App(name="logsense-streamlit", image=image)
 
 # ECONOMIC GUARDRAILS (debug mode)
 ECON = dict(
-    timeout=60,  # keep request bound short while debugging
+    timeout=300,  # increased for slow Streamlit startup
     scaledown_window=2,  # kill idle containers quickly
     min_containers=0,    # don't keep warm containers in tests
     buffer_containers=0, # no prebuffering
