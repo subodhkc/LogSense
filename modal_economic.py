@@ -33,10 +33,10 @@ image = (
     cpu=1,        # Single CPU
     secrets=[modal.Secret.from_name("openai-api-key")],
     # Auto-scale to zero when idle
-    keep_warm=0,  # Don't keep containers warm
+    min_containers=0,  # Don't keep containers warm
     timeout=1800, # 30 min timeout
 )
-@app.web_server(8000)
+@modal.web_server(8000)
 def web():
     import subprocess
     import os
@@ -56,7 +56,7 @@ def web():
     gpu="A10G",
     memory=8192,
     secrets=[modal.Secret.from_name("openai-api-key")],
-    keep_warm=0,  # Scale to zero when not used
+    min_containers=0,  # Scale to zero when not used
     timeout=600,  # 10 min timeout for ML tasks
 )
 def ml_inference(text_input: str, task_type: str):
