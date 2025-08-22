@@ -27,8 +27,10 @@ app = modal.App(name="logsense-streamlit", image=image)
     cpu=2,
     timeout=300,
     min_containers=1,
+    scaledown_window=600,  # Keep warm longer during debugging
+    retries=modal.Retries(max_retries=0),  # Prevent restart loops during debugging
 )
-@modal.web_server(port=PORT, startup_timeout=120)
+@modal.web_server(port=PORT, startup_timeout=300)  # Increased from 120 to 300
 def run():
     """Simple Streamlit server - no complex subprocess management"""
     
@@ -45,3 +47,10 @@ def run():
         "--server.fileWatcherType", "none",
         "--browser.gatherUsageStats", "false"
     ])
+
+# Health check endpoint for debugging
+@app.function(timeout=15)
+@modal.web_endpoint(label="health")
+def health():
+    """Health check endpoint to verify Modal routing"""
+    return {"status": "ok", "service": "logsense-streamlit"}
