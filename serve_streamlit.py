@@ -28,7 +28,6 @@ app = modal.App(name="logsense-streamlit", image=image)
     timeout=300,
     min_containers=1,
     scaledown_window=600,  # Keep warm longer during debugging
-    retries=modal.Retries(max_retries=0),  # Prevent restart loops during debugging
 )
 @modal.web_server(port=PORT, startup_timeout=300)  # Increased from 120 to 300
 def run():
