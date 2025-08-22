@@ -1,0 +1,15 @@
+# config/model.prod.yaml
+# Production model configuration for LogSense
+
+# Primary language model to use in production
+model_name: microsoft/phi-2
+
+# Quantization strategy: none | 8bit | 4bit
+# Use 8bit or 4bit when bitsandbytes is available to reduce memory footprint.
+quantization: none
+
+# Text generation parameters (sane defaults for concise summaries)
+max_new_tokens: 256
+temperature: 0.6
+top_p: 0.9
+repetition_penalty: 1.2

@@ -10,6 +10,7 @@ from io import BytesIO
 from dotenv import load_dotenv
 import tempfile
 from datetime import datetime
+import hashlib
 
 # Analysis modules
 from analysis.templates import TemplateExtractor
@@ -27,16 +28,14 @@ import recommendations
 import ai_rca
 import report
 import setup
-import clustering_model
-import decision_tree_model
-import anomaly_svm
+# Lazy load heavy ML modules to avoid memory issues at startup
+clustering_model = None
+decision_tree_model = None
+anomaly_svm = None
 from rca_rules import get_all_rca_summaries
 
-# Advanced analytics
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'Python Modules'))
-from analyzer.advanced_analytics import AdvancedAnalyticsEngine
+# Advanced analytics - lazy load to avoid heavy ML imports at startup
+AdvancedAnalyticsEngine = None
 
 # UI Components
 from ui_components import (
@@ -94,6 +93,15 @@ use_python_eng = engines["python"]
 use_local_llm = engines["local_llm"]
 use_cloud_ai = engines["cloud_ai"]
 
+# Cached helpers
+@st.cache_data(show_spinner=False)
+def _hash_bytes(b: bytes) -> str:
+    return hashlib.sha256(b or b"").hexdigest()
+
+@st.cache_data(show_spinner=False)
+def _parse_logs_cached(content: str, fname: str):
+    return analysis.parse_logs(content, fname=fname)
+
 # --- Welcome Screen ---
 if "show_welcome" not in st.session_state:
     st.session_state["show_welcome"] = True
@@ -106,32 +114,57 @@ if st.session_state["show_welcome"]:
 render_header()
 render_progress_indicator(st.session_state["current_step"])
 
-# User Information Section
-with st.expander("User & Test Information", expanded=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        user_name = st.text_input("Your Name", placeholder="Enter your full name", help="This will appear in your final report.")
-        app_name = st.text_input("Application Being Tested", placeholder="e.g., HP Power Manager", help="Used to focus log filtering and reporting.")
-    with col2:
-        app_version = st.text_input("Application Version", placeholder="e.g., v2.1.3 or Build 12345", help="Version of the application being tested")
-        test_environment = st.selectbox("Test Environment", ["Production", "Staging", "Development", "QA", "Pre-production", "Other"], help="Environment where testing occurred")
+with st.form("user_context_form"):
+    # User Information Section
+    with st.expander("User & Test Information", expanded=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            user_name = st.text_input("Your Name", key="user_name", placeholder="Enter your full name", help="This will appear in your final report.")
+            app_name = st.text_input("Application Being Tested", key="app_name", placeholder="e.g., HP Power Manager", help="Used to focus log filtering and reporting.")
+        with col2:
+            app_version = st.text_input("Application Version", key="app_version", placeholder="e.g., v2.1.3 or Build 12345", help="Version of the application being tested")
+            test_environment = st.selectbox("Test Environment", ["Production", "Staging", "Development", "QA", "Pre-production", "Other"], key="test_environment", help="Environment where testing occurred")
 
-# Issue Description Section
-with st.expander("Issue Description & Context", expanded=True):
-    issue_description = st.text_area(
-        "Describe the Issue", 
-        placeholder="What problem are you experiencing? Be specific about symptoms, error messages, and impact.",
-        height=100,
-        help="Detailed description helps AI provide better root cause analysis"
-    )
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        deployment_method = st.selectbox("Deployment Method", ["DASH Imaging", "SoftPaq Installation", "Manual Install", "Group Policy", "SCCM", "Other"])
-        build_changes = st.text_area("Recent Changes", placeholder="Any recent updates, patches, or configuration changes", height=100)
-    with col2:
-        build_number = st.text_input("Build/Version Number", placeholder="e.g., 26000.1000")
-        previous_version = st.text_input("Previous Working Version", placeholder="Last known good version")
+    # Issue Description Section
+    with st.expander("Issue Description & Context", expanded=True):
+        issue_description = st.text_area(
+            "Describe the Issue", 
+            key="issue_description",
+            placeholder="What problem are you experiencing? Be specific about symptoms, error messages, and impact.",
+            height=100,
+            help="Detailed description helps AI provide better root cause analysis"
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            deployment_method = st.selectbox("Deployment Method", ["DASH Imaging", "SoftPaq Installation", "Manual Install", "Group Policy", "SCCM", "Other"], key="deployment_method")
+            build_changes = st.text_area("Recent Changes", key="build_changes", placeholder="Any recent updates, patches, or configuration changes", height=100)
+        with col2:
+            build_number = st.text_input("Build/Version Number", key="build_number", placeholder="e.g., 26000.1000")
+            previous_version = st.text_input("Previous Working Version", key="previous_version", placeholder="Last known good version")
+
+    # Additional information for reporting (collapsible)
+    with st.expander("Additional Information (Optional)", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            hw_model = st.text_input("Hardware Model", key="hw_model", placeholder="e.g., HP EliteBook 840 G10")
+            os_build = st.text_input("OS Build", key="os_build", placeholder="e.g., Windows 11 26000.1000")
+            region = st.text_input("Region/Locale", key="region", placeholder="e.g., US, EMEA")
+            test_run_id = st.text_input("Test Run ID", key="test_run_id", placeholder="e.g., CI-12345 or Manual-2025-08-21")
+        with col2:
+            network_constraints = st.text_input("Network Constraints", key="network_constraints", placeholder="e.g., Proxy required, firewalled, offline")
+            proxy_config = st.text_input("Proxy Config", key="proxy_config", placeholder="e.g., http://proxy:8080")
+            device_sku = st.text_input("Device SKU", key="device_sku", placeholder="Optional device SKU or platform code")
+            notes_private = st.text_area("Private Notes (not shared)", key="notes_private", height=80)
+
+    submitted_controls = st.form_submit_button("Apply / Update")
+
+# Gate the app until the user applies inputs at least once
+if submitted_controls:
+    st.session_state["controls_submitted"] = True
+if not st.session_state.get("controls_submitted"):
+    st.info("Configure inputs and click 'Apply / Update' to proceed.")
+    st.stop()
 
 # File Upload Section
 with st.expander("Log File Upload", expanded=True):
@@ -140,46 +173,73 @@ with st.expander("Log File Upload", expanded=True):
         type=["zip", "txt", "log"], 
         help="Upload a ZIP file containing multiple logs, or individual log files."
     )
-    
-    events = []
-    redacted_events = []
-    redacted_metadata = {}
-    
+
+    # Initialize local variables from session for rendering
+    events = st.session_state.get("events", [])
+    redacted_events = st.session_state.get("redacted_events", [])
+    redacted_metadata = st.session_state.get("redacted_metadata", {})
+
     if uploaded_file is not None:
         st.session_state["current_step"] = 1
-        
-        with st.spinner("Processing uploaded files..."):
-            if uploaded_file.name.endswith('.zip'):
-                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-                    zip_contents = zip_ref.namelist()
-                    log_files = [f for f in zip_contents if f.endswith(('.txt', '.log'))]
-                    
-                    render_info_card(
-                        "Archive Contents", 
-                        f"Found {len(log_files)} log files in ZIP archive ({len(zip_contents)} total files)",
-                        ""
-                    )
-                    
-                    for file_name in log_files:
-                        with zip_ref.open(file_name) as file:
-                            content = file.read().decode('utf-8', errors='ignore')
-                            file_events = analysis.parse_logs(content, fname=file_name)
-                            events.extend(file_events)
-            else:
-                content = uploaded_file.read().decode('utf-8', errors='ignore')
-                events = analysis.parse_logs(content, fname=uploaded_file.name)
-        
-        st.session_state["files_processed"] = 1 if not uploaded_file.name.endswith('.zip') else len(log_files)
-        st.session_state["events_analyzed"] = len(events)
-        
-        render_status_badge("success", f"Processed {len(events)} log events")
-        
-        # Apply redaction
-        with st.spinner("Applying redaction patterns..."):
-            redacted_events, redacted_metadata = redaction.apply_redaction(events, {})
-        
-        render_status_badge("success", f"Redaction complete. {len(redacted_events)} events processed.")
-        st.session_state["current_step"] = 2
+
+        # Compute content hash to avoid reprocessing unchanged file(s)
+        try:
+            uploaded_bytes = uploaded_file.getvalue()
+        except Exception:
+            # Fallback if getvalue not available (ZIP streaming), read via buffer
+            uploaded_bytes = uploaded_file.read()
+        file_hash = _hash_bytes(uploaded_bytes)
+
+        if st.session_state.get("uploaded_file_hash") != file_hash:
+            with st.spinner("Processing uploaded files..."):
+                events_new = []
+                files_processed = 0
+                if uploaded_file.name.endswith('.zip'):
+                    with zipfile.ZipFile(io.BytesIO(uploaded_bytes), 'r') as zip_ref:
+                        zip_contents = zip_ref.namelist()
+                        log_files = [f for f in zip_contents if f.endswith(('.txt', '.log'))]
+
+                        render_info_card(
+                            "Archive Contents", 
+                            f"Found {len(log_files)} log files in ZIP archive ({len(zip_contents)} total files)",
+                            ""
+                        )
+
+                        for file_name in log_files:
+                            with zip_ref.open(file_name) as file:
+                                content = file.read().decode('utf-8', errors='ignore')
+                                file_events = _parse_logs_cached(content, fname=file_name)
+                                events_new.extend(file_events)
+                        files_processed = len(log_files)
+                else:
+                    content = uploaded_bytes.decode('utf-8', errors='ignore')
+                    events_new = _parse_logs_cached(content, fname=uploaded_file.name)
+                    files_processed = 1
+
+            st.session_state["events"] = events_new
+            st.session_state["files_processed"] = files_processed
+            st.session_state["events_analyzed"] = len(events_new)
+
+            render_status_badge("success", f"Processed {len(events_new)} log events")
+
+            # Apply redaction only when events change
+            with st.spinner("Applying redaction patterns..."):
+                red_evts, red_meta = redaction.apply_redaction(events_new, {})
+
+            st.session_state["redacted_events"] = red_evts
+            st.session_state["redacted_metadata"] = red_meta
+            st.session_state["uploaded_file_hash"] = file_hash
+
+            # Invalidate dependent artifacts
+            for k in ("ai_summary_local", "ai_summary_cloud", "pdf_standard", "pdf_local_ai", "pdf_cloud_ai"):
+                st.session_state.pop(k, None)
+
+            redacted_events = red_evts
+            redacted_metadata = red_meta
+            events = events_new
+
+            render_status_badge("success", f"Redaction complete. {len(red_evts)} events processed.")
+            st.session_state["current_step"] = 2
 
 # Only show analysis sections if we have data
 if redacted_events:
@@ -207,6 +267,15 @@ if redacted_events:
         "build_number": build_number,
         "previous_version": previous_version,
         "issue_description": issue_description,
+        # Optional extras
+        "hw_model": st.session_state.get("hw_model"),
+        "os_build": st.session_state.get("os_build"),
+        "region": st.session_state.get("region"),
+        "test_run_id": st.session_state.get("test_run_id"),
+        "network_constraints": st.session_state.get("network_constraints"),
+        "proxy_config": st.session_state.get("proxy_config"),
+        "device_sku": st.session_state.get("device_sku"),
+        "notes_private": st.session_state.get("notes_private"),
     }
 
     # Test Plan Section
@@ -214,13 +283,53 @@ if redacted_events:
         with st.expander("Test Plan Validation", expanded=False):
             available_plans = setup.get_available_test_plans()
             if available_plans:
-                selected_plan = st.selectbox("Select Test Plan", ["None"] + available_plans)
-                if selected_plan != "None":
-                    plan_data = setup.get_test_plan(selected_plan)
+                # Friendly mapping for known plans (SoftPaq vs Factory Image/Pulsar)
+                plan_labels = {}
+                for fn in available_plans:
+                    low = fn.lower()
+                    if "softpaq" in low:
+                        plan_labels[fn] = "SoftPaq (SP/DASH Installer)"
+                    elif "dash" in low or "pulsar" in low or "factory" in low:
+                        plan_labels[fn] = "Factory Image (Pulsar/DASH)"
+                    else:
+                        plan_labels[fn] = fn
+
+                display_options = ["None"] + [f"{plan_labels[fn]} — {fn}" for fn in available_plans]
+                sel = st.selectbox("Select Test Plan", display_options)
+                if sel != "None":
+                    # Extract filename from selection
+                    try:
+                        selected_plan_file = sel.split(" — ", 1)[1]
+                    except Exception:
+                        selected_plan_file = sel
+                    plan_data = setup.get_test_plan(selected_plan_file)
                     if plan_data:
-                        test_results = test_plan.validate_plan(plan_data, events)
-                        if test_results:
-                            render_data_table(pd.DataFrame(test_results), "Test Results")
+                        friendly_name = plan_labels.get(selected_plan_file, selected_plan_file)
+                        rich_result = test_plan.validate_plan(plan_data, events, plan_name=friendly_name)
+                        st.session_state["validation_result"] = rich_result
+                        # Render compact table view
+                        if rich_result and rich_result.get("steps"):
+                            df = pd.DataFrame([
+                                {
+                                    "Step": s.get("Step"),
+                                    "Action": s.get("Step Action"),
+                                    "Expected": s.get("Expected Result"),
+                                    "Status": s.get("Status"),
+                                    "Phase": s.get("phase"),
+                                    "First Hit": s.get("first_hit_time"),
+                                    "Last Hit": s.get("last_hit_time"),
+                                }
+                                for s in rich_result["steps"]
+                            ])
+                            render_data_table(df, "Test Results")
+                            # Summary chips
+                            summ = rich_result.get("summary", {})
+                            render_status_badge(
+                                "info",
+                                f"Pass: {summ.get('pass_count',0)} | Fail: {summ.get('fail_count',0)}" + (
+                                    f" | First failure phase: {summ.get('first_failure_phase')}" if summ.get('first_failure_phase') else ""
+                                ),
+                            )
                         else:
                             st.info("No test plan results available.")
                     else:
@@ -295,6 +404,9 @@ if redacted_events:
                 help="Groups similar events by message structure/features. Use clusters to spot families of related errors and reduce noise."
             ):
                 with st.spinner("Clustering events..."):
+                    if clustering_model is None:
+                        import clustering_model as _clustering_model
+                        clustering_model = _clustering_model
                     cluster_fig = clustering_model.cluster_events(events)
                     if cluster_fig:
                         st.pyplot(cluster_fig)
@@ -306,6 +418,9 @@ if redacted_events:
                 help="Estimates severity trends from features. Use it to prioritize attention across components or time windows."
             ):
                 with st.spinner("Analyzing severity predictions..."):
+                    if decision_tree_model is None:
+                        import decision_tree_model as _decision_tree_model
+                        decision_tree_model = _decision_tree_model
                     severity_fig = decision_tree_model.analyze_event_severity(events)
                     if severity_fig:
                         st.pyplot(severity_fig)
@@ -317,6 +432,9 @@ if redacted_events:
                 help="Flags events/time windows that deviate from baseline. Use anomalies to investigate spikes or rare failure sequences."
             ):
                 with st.spinner("Detecting anomalies..."):
+                    if anomaly_svm is None:
+                        import anomaly_svm as _anomaly_svm
+                        anomaly_svm = _anomaly_svm
                     anomaly_fig = anomaly_svm.detect_anomalies(events)
                     if anomaly_fig:
                         st.pyplot(anomaly_fig)
@@ -412,6 +530,15 @@ if redacted_events:
         def _build_python_insights(evts):
             recs = []
             try:
+                # Lazy load advanced analytics engine
+                global AdvancedAnalyticsEngine
+                if AdvancedAnalyticsEngine is None:
+                    import sys
+                    import os
+                    sys.path.append(os.path.join(os.path.dirname(__file__), 'Python Modules'))
+                    from analyzer.advanced_analytics import AdvancedAnalyticsEngine as _AdvancedAnalyticsEngine
+                    AdvancedAnalyticsEngine = _AdvancedAnalyticsEngine
+                
                 # Initialize advanced analytics engine
                 analytics_engine = AdvancedAnalyticsEngine()
                 
@@ -542,7 +669,7 @@ if redacted_events:
                 pdf = report.generate_pdf(
                     redacted_events,
                     redacted_metadata,
-                    [],
+                    st.session_state.get("validation_result", {}),
                     py_insights,
                     user_name=user_name,
                     app_name=app_name,
@@ -555,7 +682,7 @@ if redacted_events:
             with st.spinner("Generating AI summary using Local LLM..."):
                 ai_summary = ai_rca.analyze_with_ai(redacted_events, redacted_metadata, [], user_context, offline=True)
                 st.session_state["ai_summary_local"] = ai_summary
-                pdf = report.generate_pdf(redacted_events, redacted_metadata, [], {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
+                pdf = report.generate_pdf(redacted_events, redacted_metadata, st.session_state.get("validation_result", {}), {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
                 st.session_state["pdf_local_ai"] = pdf
             st.session_state["active_report_mode"] = "local_ai"
 
@@ -563,7 +690,7 @@ if redacted_events:
             with st.spinner("Generating AI summary using OpenAI..."):
                 ai_summary = ai_rca.analyze_with_ai(redacted_events, redacted_metadata, [], user_context, offline=False)
                 st.session_state["ai_summary_cloud"] = ai_summary
-                pdf = report.generate_pdf(redacted_events, redacted_metadata, [], {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
+                pdf = report.generate_pdf(redacted_events, redacted_metadata, st.session_state.get("validation_result", {}), {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
                 st.session_state["pdf_cloud_ai"] = pdf
             st.session_state["active_report_mode"] = "cloud_ai"
 

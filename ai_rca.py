@@ -6,7 +6,8 @@ import logging
 import os
 import time
 from dotenv import load_dotenv
-from modules.phi2_inference_lora import phi2_summarize  # auto-loads LoRA if present
+# Lazy import heavy offline model only when needed to avoid torch DLL load at startup
+phi2_summarize = None  # will be set on-demand
 
 # ----- Load .env and API key -----
 load_dotenv()
@@ -151,6 +152,11 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
         try:
             if MODEL_BACKEND == "phi2":
                 logger.info("Running Phi-2 offline RCA (with optional LoRA)...")
+                global phi2_summarize
+                if phi2_summarize is None:
+                    # Import here to avoid importing torch during app startup
+                    from modules.phi2_inference_lora import phi2_summarize as _phi2_sum
+                    phi2_summarize = _phi2_sum
                 completion = phi2_summarize(prompt, max_tokens=250)
                 return completion or ""
             else:

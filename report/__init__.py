@@ -15,6 +15,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.lib.utils import simpleSplit
+import os
+import json
 
 
 THEME = {
@@ -94,11 +96,202 @@ def _new_page(c: canvas.Canvas, width: float, height: float) -> tuple[float, flo
     c.setFillColor(THEME["text"]) 
     return MARGINS["left"], height - MARGINS["top"]
 
+def _softpaq_evaluate(events: List[Any]) -> Dict[str, Any]:
+    """Evaluate events against SoftPaq checklist if available.
+
+    Returns a structure:
+      {
+        'available': bool,
+        'by_category': [
+            { 'title': str, 'checks': [ { 'id': str, 'desc': str, 'severity': str, 'hits': int } ] }
+        ],
+        'kpi': { 'total': int, 'with_evidence': int, 'by_severity': { sev: { 'total': n, 'with_evidence': m } } }
+      }
+    """
+    cfg_path = os.path.join("config", "softpaq_validation_checklist.json")
+    if not os.path.exists(cfg_path):
+        return {"available": False}
+    try:
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except Exception:
+        return {"available": False}
+
+    # Build searchable corpus from events
+    corpus = []
+    for ev in events:
+        parts = [
+            str(getattr(ev, "timestamp", "")),
+            str(getattr(ev, "component", "")),
+            str(getattr(ev, "severity", "")),
+            str(getattr(ev, "message", "")),
+        ]
+        corpus.append(" ".join(parts).lower())
+
+    def count_hits(patterns: List[str]) -> int:
+        pats = [p.lower() for p in (patterns or [])]
+        if not pats:
+            return 0
+        hits = 0
+        for line in corpus:
+            if any(p in line for p in pats):
+                hits += 1
+        return hits
+
+    result = {
+        "available": True,
+        "by_category": [],
+        "kpi": {"total": 0, "with_evidence": 0, "by_severity": {}},
+        "scoring": {"by_severity": {}, "overall": {"verdict": "inconclusive", "reason": ""}},
+    }
+    cats = (cfg.get("validation_categories") or {})
+
+    # Heuristic negative tokens if not explicitly provided per check
+    NEG_TOKENS = [
+        "error", "failed", "failure", "access denied", "permission denied", "corrupt",
+        "timeout", "unreachable", "cannot", "could not", "exception", "fatal"
+    ]
+
+    def has_any(line_list: List[str], needles: List[str]) -> bool:
+        if not needles:
+            return False
+        low_needles = [n.lower() for n in needles]
+        for line in line_list:
+            if any(n in line for n in low_needles):
+                return True
+        return False
+
+    for key, cat in cats.items():
+        title = cat.get("title", key.replace("_", " ").title())
+        checks_out = []
+        for chk in cat.get("checks", []):
+            pos_hits = count_hits(chk.get("log_patterns", []))
+            sev = (chk.get("severity") or "info").lower()
+            neg_pats = chk.get("negative_patterns") or []
+            neg_present = has_any(corpus, neg_pats) if neg_pats else has_any(corpus, NEG_TOKENS)
+
+            # Status precedence: Fail (negative) > Pass (positive evidence) > Inconclusive
+            if neg_present:
+                status = "fail"
+            elif pos_hits > 0:
+                status = "pass"
+            else:
+                status = "inconclusive"
+            checks_out.append({
+                "id": chk.get("id"),
+                "desc": chk.get("description", ""),
+                "severity": sev,
+                "hits": pos_hits,
+                "negative": bool(neg_present),
+                "status": status,
+            })
+            # KPIs
+            result["kpi"]["total"] += 1
+            if pos_hits > 0:
+                result["kpi"]["with_evidence"] += 1
+            if sev not in result["kpi"]["by_severity"]:
+                result["kpi"]["by_severity"][sev] = {"total": 0, "with_evidence": 0}
+            result["kpi"]["by_severity"][sev]["total"] += 1
+            if pos_hits > 0:
+                result["kpi"]["by_severity"][sev]["with_evidence"] += 1
+
+        result["by_category"].append({"title": title, "checks": checks_out})
+
+    # Scoring by severity with thresholds
+    thresholds = {"critical": 1.0, "high": 0.8, "medium": 0.7, "low": 0.5}
+    # Attempt to read from cfg.validation_rules.pass_criteria if numeric values were provided; fallback to defaults above
+    rules = (cfg.get("validation_rules") or {}).get("pass_criteria", {})
+    # If rules are strings like "At least 80%...", keep defaults.
+
+    sev_totals = {}
+    sev_pass = {}
+    sev_fail = {}
+    # Aggregate statuses per severity
+    for cat in result["by_category"]:
+        for chk in cat["checks"]:
+            sev = chk["severity"]
+            sev_totals[sev] = sev_totals.get(sev, 0) + 1
+            if chk["status"] == "pass":
+                sev_pass[sev] = sev_pass.get(sev, 0) + 1
+            if chk["status"] == "fail":
+                sev_fail[sev] = sev_fail.get(sev, 0) + 1
+
+    verdict = "pass"
+    reason_bits = []
+    by_sev_scores = {}
+    for sev, total in sev_totals.items():
+        p = sev_pass.get(sev, 0)
+        rate = (p / total) if total else 0.0
+        meet = rate >= thresholds.get(sev, 0.7)
+        by_sev_scores[sev] = {"total": total, "passed": p, "rate": rate, "threshold": thresholds.get(sev, 0.7), "meets": meet, "fails": sev_fail.get(sev, 0)}
+        # Any critical failure makes overall Fail
+        if sev == "critical" and (p < total):
+            verdict = "fail"
+        # Track misses for Needs Review
+        if not meet and verdict != "fail":
+            verdict = "needs_review"
+    # Reason text
+    for sev, stats in by_sev_scores.items():
+        if not stats["meets"]:
+            reason_bits.append(f"{sev.title()} {int(stats['rate']*100)}% < {int(stats['threshold']*100)}%")
+    result["scoring"]["by_severity"] = by_sev_scores
+    result["scoring"]["overall"] = {"verdict": verdict, "reason": "; ".join(reason_bits)}
+
+    return result
+
+def _verdict_banner(c: canvas.Canvas, x: float, y: float, width: float, verdict: str, reason: str | None = None) -> float:
+    # Colors
+    if verdict == "pass":
+        bg = colors.HexColor("#10B981")  # green
+        label = "PASS"
+    elif verdict == "needs_review":
+        bg = colors.HexColor("#F59E0B")  # amber
+        label = "NEEDS REVIEW"
+    else:
+        bg = colors.HexColor("#EF4444")  # red
+        label = "FAIL"
+
+    h = 32
+    c.setFillColor(bg)
+    avail_w = width - MARGINS["left"] - MARGINS["right"]
+    c.roundRect(x, y - h, avail_w, h, 6, stroke=0, fill=1)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(x + 10, y - 21, f"SoftPaq Validation: {label}")
+    if reason:
+        c.setFont("Helvetica", 10)
+        c.drawRightString(x + avail_w - 10, y - 21, reason[:90])
+    return y - (h + 8)
+
+def _verdict_banner_generic(c: canvas.Canvas, x: float, y: float, width: float, title: str, verdict: str, reason: str | None = None) -> float:
+    # Colors
+    if verdict == "pass":
+        bg = colors.HexColor("#10B981")  # green
+        label = "PASS"
+    elif verdict == "needs_review":
+        bg = colors.HexColor("#F59E0B")  # amber
+        label = "NEEDS REVIEW"
+    else:
+        bg = colors.HexColor("#EF4444")  # red
+        label = "FAIL"
+
+    h = 32
+    c.setFillColor(bg)
+    avail_w = width - MARGINS["left"] - MARGINS["right"]
+    c.roundRect(x, y - h, avail_w, h, 6, stroke=0, fill=1)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(x + 10, y - 21, f"{title}: {label}")
+    if reason:
+        c.setFont("Helvetica", 10)
+        c.drawRightString(x + avail_w - 10, y - 21, reason[:90])
+    return y - (h + 8)
+
 
 def generate_pdf(
     events: List[Any],
     metadata: Dict[str, Any],
-    test_results: List[Dict[str, Any]],
+    test_results: Any,
     recommendations: Any,
     user_name: str,
     app_name: str,
@@ -144,6 +337,107 @@ def generate_pdf(
         y = _kv(c, x, y, str(k), str(v), width)
         if y < MARGINS["bottom"] + 48:
             x, y = _new_page(c, width, height)
+
+    # Validation Results (from selected plan, if provided)
+    if isinstance(test_results, dict) and test_results.get("steps"):
+        plan_name = test_results.get("plan_name") or "Selected Plan"
+        summ = test_results.get("summary", {})
+        fail_count = int(summ.get("fail_count" , 0) or 0)
+        pass_count = int(summ.get("pass_count", 0) or 0)
+        first_failure_phase = summ.get("first_failure_phase")
+
+        y = _section_header(c, x, y, width, f"Validation Results — {plan_name}")
+        verdict = "pass" if fail_count == 0 else "fail"
+        reason_bits = []
+        if fail_count:
+            reason_bits.append(f"{fail_count} step(s) failed")
+        if first_failure_phase:
+            reason_bits.append(f"First failure phase: {first_failure_phase}")
+        y = _verdict_banner_generic(c, x, y, width, plan_name, verdict, "; ".join(reason_bits) if reason_bits else None)
+
+        # Quick KPI line
+        kpi_line = f"Pass: {pass_count} | Fail: {fail_count}"
+        y = _bullets(c, x, y, [kpi_line], width)
+        y -= 4
+
+        # List steps with minimal evidence
+        step_lines = []
+        for s in test_results.get("steps", [])[:30]:
+            step_no = s.get("Step")
+            status = s.get("Status")
+            action = (s.get("Step Action") or "").strip()
+            phase = s.get("phase")
+            label = f"Step {step_no}: {status} — {action}"
+            if phase:
+                label += f" [Phase: {phase}]"
+            step_lines.append(label)
+        y = _bullets(c, x + 6, y, step_lines, width)
+        y -= 6
+
+        # Evidence snippets for failed steps (limit)
+        ev_blocks = []
+        for s in test_results.get("steps", [])[:10]:
+            if s.get("Status") == "Fail":
+                ev = s.get("evidence", []) or []
+                if not ev:
+                    continue
+                ev_lines = []
+                for e in ev[:2]:
+                    ts = e.get("timestamp", "")
+                    msg = (e.get("message", "") or "")[:140]
+                    ev_lines.append(f"[{ts}] {msg}")
+                if ev_lines:
+                    ev_blocks.extend(ev_lines)
+        if ev_blocks:
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColor(THEME["text"]) 
+            c.drawString(x, y, "Failure Evidence (snippets)")
+            y -= 14
+            y = _bullets(c, x + 6, y, ev_blocks[:8], width)
+            y -= 6
+
+        if y < MARGINS["bottom"] + 48:
+            x, y = _new_page(c, width, height)
+
+    # SoftPaq Validation (if checklist available)
+    spq = _softpaq_evaluate(events)
+    if spq.get("available"):
+        y = _section_header(c, x, y, width, "SoftPaq Validation")
+        # Overall verdict banner
+        overall = spq.get("scoring", {}).get("overall", {})
+        y = _verdict_banner(c, x, y, width, overall.get("verdict", "inconclusive"), overall.get("reason", ""))
+        # KPI summary line
+        kpi = spq.get("kpi", {})
+        total = kpi.get("total", 0)
+        with_ev = kpi.get("with_evidence", 0)
+        sev_lines = []
+        for sev, stats in (kpi.get("by_severity", {})).items():
+            sev_lines.append(f"{sev.title()}: {stats.get('with_evidence',0)}/{stats.get('total',0)} with evidence")
+        summary_line = f"Checks with evidence: {with_ev}/{total}"
+        y = _bullets(c, x, y, [summary_line] + sev_lines, width)
+        y -= 6
+
+        # Per-category details
+        for cat in spq.get("by_category", []):
+            # Category header as small subheader
+            c.setFont("Helvetica-Bold", 11)
+            c.setFillColor(THEME["text"]) 
+            c.drawString(x, y, cat.get("title", "Category"))
+            y -= 14
+            if y < MARGINS["bottom"] + 60:
+                x, y = _new_page(c, width, height)
+
+            lines = []
+            for chk in cat.get("checks", []):
+                sev = (chk.get("severity") or "info").upper()
+                desc = chk.get("desc") or chk.get("id") or "Check"
+                hits = chk.get("hits", 0)
+                status = "Evidence found" if hits > 0 else "No evidence"
+                lines.append(f"[{sev}] {desc} — {status} (hits: {hits})")
+            y = _bullets(c, x + 8, y, lines, width)
+            y -= 4
+            if y < MARGINS["bottom"] + 48:
+                x, y = _new_page(c, width, height)
 
     # Key events (Errors)
     errs = [ev for ev in events if getattr(ev, "severity", "").upper() in ("ERROR", "CRITICAL")]

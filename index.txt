@@ -6,7 +6,7 @@ redaction.py
 test_plan.py
 recommendations.py
 ai_rca.py
-report.py
+report/
 setup.py
 utils.py
 clustering.py

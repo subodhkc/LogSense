@@ -12,7 +12,8 @@ CONFIG_PATH = "config"
 PLANS_PATH = "plans"
 DEFAULT_PLAN = "dash_test_plan.json"
 SOFTPAQ_PLAN = "softpaq_test_plan.json"
-PRIVATE_API_KEY = os.getenv("OPENAI_API_KEY", "")
+# API key should be loaded from environment variables in production
+# PRIVATE_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 # === File Loaders ===
 

@@ -208,13 +208,43 @@ if redacted_events:
         with st.expander("📋 Test Plan Validation", expanded=False):
             available_plans = setup.get_available_test_plans()
             if available_plans:
-                selected_plan = st.selectbox("Select Test Plan", ["None"] + available_plans)
-                if selected_plan != "None":
-                    plan_data = setup.get_test_plan(selected_plan)
+                # Friendly mapping similar to primary UI
+                plan_labels = {}
+                for fn in available_plans:
+                    low = fn.lower()
+                    if "softpaq" in low:
+                        plan_labels[fn] = "SoftPaq (SP/DASH Installer)"
+                    elif "dash" in low or "pulsar" in low or "factory" in low:
+                        plan_labels[fn] = "Factory Image (Pulsar/DASH)"
+                    else:
+                        plan_labels[fn] = fn
+
+                display_options = ["None"] + [f"{plan_labels[fn]} — {fn}" for fn in available_plans]
+                sel = st.selectbox("Select Test Plan", display_options)
+                if sel != "None":
+                    try:
+                        selected_plan_file = sel.split(" — ", 1)[1]
+                    except Exception:
+                        selected_plan_file = sel
+                    plan_data = setup.get_test_plan(selected_plan_file)
                     if plan_data:
-                        test_results = test_plan.validate_plan(plan_data, events)
-                        if test_results:
-                            render_data_table(pd.DataFrame(test_results), "Test Results")
+                        friendly_name = plan_labels.get(selected_plan_file, selected_plan_file)
+                        rich_result = test_plan.validate_plan(plan_data, events, plan_name=friendly_name)
+                        st.session_state["validation_result"] = rich_result
+                        if rich_result and rich_result.get("steps"):
+                            df = pd.DataFrame([
+                                {
+                                    "Step": s.get("Step"),
+                                    "Action": s.get("Step Action"),
+                                    "Expected": s.get("Expected Result"),
+                                    "Status": s.get("Status"),
+                                    "Phase": s.get("phase"),
+                                    "First Hit": s.get("first_hit_time"),
+                                    "Last Hit": s.get("last_hit_time"),
+                                }
+                                for s in rich_result["steps"]
+                            ])
+                            render_data_table(df, "Test Results")
                         else:
                             st.info("No test plan results available.")
                     else:
@@ -370,19 +400,19 @@ if redacted_events:
         
         if selected_action == "no_ai":
             with st.spinner("Generating standard report..."):
-                pdf = report.generate_pdf(redacted_events, redacted_metadata, [], {}, user_name=user_name, app_name=app_name, ai_summary=None, user_context=user_context)
+                pdf = report.generate_pdf(redacted_events, redacted_metadata, st.session_state.get("validation_result", {}), {}, user_name=user_name, app_name=app_name, ai_summary=None, user_context=user_context)
                 st.download_button("Download Standard Report", data=pdf, file_name="LogSense_Report_Standard.pdf", mime="application/pdf")
         
         elif selected_action == "local_ai":
             with st.spinner("Generating AI summary using Local LLM..."):
                 ai_summary = ai_rca.analyze_with_ai(redacted_events, redacted_metadata, [], user_context, offline=True)
-                pdf = report.generate_pdf(redacted_events, redacted_metadata, [], {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
+                pdf = report.generate_pdf(redacted_events, redacted_metadata, st.session_state.get("validation_result", {}), {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
                 st.download_button("Download Local AI Report", data=pdf, file_name="LogSense_Report_LocalAI.pdf", mime="application/pdf")
         
         elif selected_action == "cloud_ai":
             with st.spinner("Generating AI summary using OpenAI..."):
                 ai_summary = ai_rca.analyze_with_ai(redacted_events, redacted_metadata, [], user_context, offline=False)
-                pdf = report.generate_pdf(redacted_events, redacted_metadata, [], {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
+                pdf = report.generate_pdf(redacted_events, redacted_metadata, st.session_state.get("validation_result", {}), {}, user_name=user_name, app_name=app_name, ai_summary=ai_summary, user_context=user_context)
                 st.download_button("Download Cloud AI Report", data=pdf, file_name="LogSense_Report_CloudAI.pdf", mime="application/pdf")
 
         # One-Pager PDF

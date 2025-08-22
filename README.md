@@ -1,17 +1,17 @@
-# SKC Log Reader (Phi‑2)
+# LogSense — Enterprise Log Analysis & RCA
 
-SKC Log Reader is a modular log analysis tool built with Python + Streamlit. It helps TPMs and QA engineers triage provisioning/installer logs (BIOS, SoftPaq, MSI, imaging, agents) and produces concise RCA with optional LLM assistance.
+LogSense is a professional, modular log analysis application built with Python and Streamlit. It helps TPMs, QA engineers, and support teams triage provisioning/installer logs (BIOS, SoftPaq, MSI, imaging, agents) and produce concise, defensible root‑cause analysis (RCA). AI assistance is available via local LLM or cloud.
 
 
 
 ## 🔍 Key Features
-- Upload ZIP logs and parse events across multiple files
-- Structured Pre-AI RCA with error detection and rule-based recommendations
-- Interactive timeline, test plan validation, log filtering
-- Visuals via charts, clustering, decision trees, and anomaly detection (SVM)
-- Redaction engine with built-in patterns for PII
-- PDF report export (with visual summaries)
-- Optional LLM-powered analysis (offline or via OpenAI API)
+- Secure log ingestion (ZIP and single-file) with robust parsing
+- Structured pre‑AI RCA: error detection, correlations, and rule‑based recommendations
+- Interactive timeline, test plan validation, and focused log filtering
+- Advanced analytics: clustering, anomaly detection (SVM), decision trees
+- PII redaction engine with configurable patterns
+- Professional PDF reporting with corporate SaaS design and executive one‑pager
+- Optional AI analysis: local (offline) model or OpenAI fallback
 
 ## 🧰 Setup
 
@@ -33,7 +33,7 @@ streamlit run skc_log_analyzer.py
 ├── test_plan.py
 ├── recommendations.py
 ├── ai_rca.py                # Hybrid AI RCA (offline Phi‑2 + OpenAI fallback)
-├── report.py
+├── report/                  # PDF report package (generate_pdf, pdf_builder)
 ├── setup.py
 ├── clustering_model.py
 ├── decision_tree_model.py
@@ -60,7 +60,7 @@ streamlit run skc_log_analyzer.py
 
 ## 🧠 LLM Support (Phi‑2 Migration)
 - Default offline model: Microsoft Phi‑2
-- Optional LoRA adapters auto-load from `adapters/phi2-lora`
+- Optional LoRA adapters auto‑load from `adapters/phi2-lora`
 - OpenAI fallback supported if `OPENAI_API_KEY` is set
 
 Env/config overrides (also see `config/model.yaml`):
