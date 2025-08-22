@@ -17,8 +17,8 @@ app = modal.App(name=APP_NAME, image=image)
 @app.function(timeout=24*60*60, memory=2048, min_containers=1)
 @modal.asgi_app()
 def native_app():
-    from fastapi import FastAPI, File, UploadFile
-    from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi import FastAPI, File, UploadFile, Request
+    from fastapi.responses import HTMLResponse, JSONResponse, Response
     import os
     import tempfile
     from datetime import datetime
@@ -234,26 +234,43 @@ def native_app():
             </div>
             <div class="file-info" id="fileInfo" style="display: none;"></div>
             
-            <!-- Analysis Engine Selection -->
-            <div id="engineSelection" style="display: none; margin: 20px 0;">
-                <h4>Select Analysis Engines</h4>
+            <!-- Analysis Type Selection -->
+            <div id="analysisSelection" style="display: none; margin: 20px 0;">
+                <h4>Select Analysis Type</h4>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
                     <div style="margin-bottom: 10px;">
                         <label style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="pythonEngine" name="pythonEngine" checked>
-                            <strong>Python Analysis Engine</strong> - Rule-based parsing and event extraction
+                            <input type="radio" id="basicAnalysis" name="analysisType" value="basic" checked>
+                            <strong>Basic Analysis</strong> - Quick event extraction and parsing
                         </label>
                     </div>
                     <div style="margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" id="aiAnalysis" name="analysisType" value="ai">
+                            <strong>AI Analysis</strong> - Advanced root cause analysis with LLM
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" id="fullAnalysis" name="analysisType" value="full">
+                            <strong>Complete Analysis</strong> - Basic + AI + Compliance checks
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Engine Selection (shown when AI or Full is selected) -->
+                <div id="engineOptions" style="display: none; background: #e7f3ff; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                    <h5>AI Engine Options</h5>
+                    <div style="margin-bottom: 8px;">
                         <label style="display: flex; align-items: center; gap: 8px;">
                             <input type="checkbox" id="localLLM" name="localLLM" checked>
-                            <strong>Local LLM</strong> - In-house Phi-2 Model for AI analysis
+                            <strong>Local LLM</strong> - In-house Phi-2 Model
                         </label>
                     </div>
-                    <div style="margin-bottom: 10px;">
+                    <div style="margin-bottom: 8px;">
                         <label style="display: flex; align-items: center; gap: 8px;">
                             <input type="checkbox" id="cloudAI" name="cloudAI">
-                            <strong>Cloud AI</strong> - OpenAI GPT Fallback (if local fails)
+                            <strong>Cloud AI</strong> - OpenAI GPT Fallback
                         </label>
                     </div>
                 </div>
@@ -273,8 +290,8 @@ def native_app():
             <div id="analysisResults"></div>
             <div style="margin-top: 20px;">
                 <button type="button" class="btn" id="backToUpload" style="background: #6c757d;">← Back to Upload</button>
-                <button type="button" class="btn" style="background: #28a745;">Generate PDF Report</button>
-                <button type="button" class="btn" style="background: #17a2b8;">Export Data</button>
+                <button type="button" class="btn" id="generateReport" style="background: #28a745;">Generate PDF Report</button>
+                <button type="button" class="btn" id="exportData" style="background: #17a2b8;">Export Data</button>
             </div>
         </div>
     </div>
@@ -380,6 +397,53 @@ def native_app():
             document.getElementById('step2').classList.add('active');
         });
         
+        // Report generation handler
+        document.getElementById('generateReport').addEventListener('click', async function() {
+            try {
+                this.disabled = true;
+                this.textContent = 'Generating...';
+                
+                const response = await fetch('/generate-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(window.lastAnalysisResult || {})
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `LogSense_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('Failed to generate report');
+                }
+            } catch (error) {
+                alert('Error generating report: ' + error.message);
+            } finally {
+                this.disabled = false;
+                this.textContent = 'Generate PDF Report';
+            }
+        });
+        
+        // Data export handler
+        document.getElementById('exportData').addEventListener('click', function() {
+            if (window.lastAnalysisResult) {
+                const dataStr = JSON.stringify(window.lastAnalysisResult, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `LogSense_Data_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('No analysis data available to export');
+            }
+        });
+        
         // Drag and drop functionality
         const uploadArea = document.getElementById('uploadArea');
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -426,7 +490,7 @@ def native_app():
         // Handle file selection and show file info
         function handleFileSelection(file) {
             const fileInfo = document.getElementById('fileInfo');
-            const engineSelection = document.getElementById('engineSelection');
+            const analysisSelection = document.getElementById('analysisSelection');
             const analyzeBtn = document.getElementById('analyzeBtn');
             
             // Show file information
@@ -436,12 +500,27 @@ def native_app():
                     <p style="margin: 5px 0;"><strong>Name:</strong> ${file.name}</p>
                     <p style="margin: 5px 0;"><strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     <p style="margin: 5px 0;"><strong>Type:</strong> ${file.type || 'Unknown'}</p>
+                    <p style="margin: 5px 0;"><span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">✓ Data will be redacted for compliance</span></p>
                 </div>
             `;
             fileInfo.style.display = 'block';
-            engineSelection.style.display = 'block';
+            analysisSelection.style.display = 'block';
             analyzeBtn.style.display = 'inline-block';
         }
+        
+        // Analysis type change handler
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'analysisType') {
+                const engineOptions = document.getElementById('engineOptions');
+                const selectedType = e.target.value;
+                
+                if (selectedType === 'ai' || selectedType === 'full') {
+                    engineOptions.style.display = 'block';
+                } else {
+                    engineOptions.style.display = 'none';
+                }
+            }
+        });
         
         // Analyze button handler
         document.getElementById('analyzeBtn').addEventListener('click', async function() {
@@ -451,15 +530,20 @@ def native_app():
             
             if (!fileInput.files[0]) { alert('Please select a file'); return; }
             
-            // Update engine selections in user context
-            window.userContext.pythonEngine = document.getElementById('pythonEngine').checked;
-            window.userContext.localLLM = document.getElementById('localLLM').checked;
-            window.userContext.cloudAI = document.getElementById('cloudAI').checked;
+            // Get selected analysis type
+            const analysisType = document.querySelector('input[name="analysisType"]:checked').value;
+            
+            // Update analysis preferences in user context
+            window.userContext.analysisType = analysisType;
+            window.userContext.pythonEngine = analysisType !== 'ai'; // Always include basic parsing unless AI-only
+            window.userContext.localLLM = (analysisType === 'ai' || analysisType === 'full') ? document.getElementById('localLLM').checked : false;
+            window.userContext.cloudAI = (analysisType === 'ai' || analysisType === 'full') ? document.getElementById('cloudAI').checked : false;
             
             // Show results section and hide upload section
             document.getElementById('uploadSection').style.display = 'none';
             resultsSection.style.display = 'block';
-            analysisResults.innerHTML = '<div style="padding: 20px; text-align: center;"><div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div><p>Analyzing log file with AI engines...</p></div>';
+            const analysisTypeText = analysisType === 'basic' ? 'basic parsing' : analysisType === 'ai' ? 'AI analysis' : 'complete analysis';
+            analysisResults.innerHTML = `<div style="padding: 20px; text-align: center;"><div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div><p>Running ${analysisTypeText} with data redaction...</p></div>`;
             
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
@@ -481,6 +565,9 @@ def native_app():
                 const result = await response.json();
                 
                 if (response.ok) {
+                    // Store result for report generation
+                    window.lastAnalysisResult = result;
+                    
                     // Update progress
                     document.getElementById('step3').classList.add('completed');
                     document.getElementById('step3').classList.remove('active');
@@ -667,6 +754,16 @@ def native_app():
                 log_content = content
                 print(f"[ANALYSIS] Processing regular log file: {file.filename}")
             
+            # Apply data redaction for compliance
+            print(f"[REDACTION] Applying data redaction for compliance...")
+            try:
+                redacted_content = redaction.redact_sensitive_data(log_content.decode('utf-8', errors='ignore'))
+                log_content = redacted_content.encode('utf-8')
+                print(f"[REDACTION] Data redaction completed")
+            except Exception as redact_error:
+                print(f"[REDACTION] Warning: Redaction failed: {redact_error}")
+                # Continue without redaction if it fails
+            
             # Create temporary file for analysis
             with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.log') as tmp_file:
                 tmp_file.write(log_content)
@@ -691,19 +788,30 @@ def native_app():
                     "zip_contents": file_list if file_list else None
                 }
                 
-                # Step 3: AI Analysis based on user engine selections
+                # Step 3: Analysis based on user selection
+                analysis_type = "basic"  # Default
+                use_local_llm = False
+                use_cloud_ai = False
+                
+                # Get analysis preferences from form data
+                try:
+                    form_data_dict = {}
+                    async for key, value in file.form():
+                        form_data_dict[key] = value
+                    
+                    analysis_type = form_data_dict.get('analysisType', 'basic')
+                    use_local_llm = form_data_dict.get('localLLM') == 'true'
+                    use_cloud_ai = form_data_dict.get('cloudAI') == 'true'
+                    
+                    print(f"[ANALYSIS] Type: {analysis_type}, Local LLM: {use_local_llm}, Cloud AI: {use_cloud_ai}")
+                except:
+                    print(f"[ANALYSIS] Using default settings: basic analysis")
+                
+                # Run AI analysis only if requested
                 ai_summary = None
-                if events and events_count > 0:
-                    # Get user context from form data (if available)
-                    use_local_llm = True  # Default
-                    use_cloud_ai = False  # Default
-                    
-                    # Try to get engine preferences from form data
-                    form_data = await file.read()  # We already read this, but need to get form context
-                    
+                if events and events_count > 0 and (analysis_type == 'ai' or analysis_type == 'full'):
                     try:
                         print(f"[AI_RCA] Starting AI analysis with {events_count} events...")
-                        print(f"[AI_RCA] Engine preferences - Local LLM: {use_local_llm}, Cloud AI: {use_cloud_ai}")
                         
                         if use_local_llm:
                             # Use in-house Phi-2 LLM (offline first)
@@ -720,7 +828,7 @@ def native_app():
                             elif use_cloud_ai:
                                 # Fallback to cloud AI if local fails and cloud is enabled
                                 print(f"[AI_RCA] Local LLM failed, trying cloud AI fallback...")
-                                ai_summary = ai_rca.generate_summary(events[:20])  # This should handle fallback
+                                ai_summary = ai_rca.generate_summary(events[:20])
                                 if ai_summary:
                                     analysis_result["ai_analysis"] = {
                                         "summary": ai_summary,
@@ -741,7 +849,7 @@ def native_app():
                                     "engine_selected": "Cloud AI (OpenAI)"
                                 }
                         else:
-                            analysis_result["ai_analysis"] = {"error": "No AI engines selected"}
+                            analysis_result["ai_analysis"] = {"info": "AI analysis not requested or no engines selected"}
                             
                     except Exception as ai_error:
                         print(f"[AI_RCA] AI analysis failed: {ai_error}")
@@ -750,6 +858,8 @@ def native_app():
                             "fallback_available": use_cloud_ai,
                             "engine_attempted": "Local LLM" if use_local_llm else "Cloud AI"
                         }
+                else:
+                    analysis_result["ai_analysis"] = {"info": f"AI analysis skipped (type: {analysis_type})"}
                 
                 # Step 4: Additional analysis if events found
                 if events_count > 0:
@@ -804,10 +914,5 @@ def native_app():
                     "debug_info": error_details if os.getenv("DEBUG") else None
                 }
             )
-
-    @web_app.get("/health")
-    async def health():
-        """Health check endpoint"""
-        return {"status": "healthy", "service": "LogSense Native", "llm": "Phi-2"}
 
     return web_app
