@@ -1,15 +1,14 @@
-# serve_streamlit.py - Minimal working Modal deployment
+# serve_minimal_test.py - Test minimal Streamlit deployment
 import modal
 import subprocess
 import os
 
-APP_ENTRY_REMOTE = "/root/app/skc_log_analyzer.py"
 PORT = 8000
 
-# Minimal image build
+# Minimal test image
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")
+    .pip_install("streamlit>=1.28.0", "pandas>=1.5.0", "numpy>=1.24.0", "matplotlib>=3.6.0")
     .env({
         "STREAMLIT_WATCHER_TYPE": "none", 
         "MODEL_BACKEND": "openai",
@@ -20,23 +19,22 @@ image = (
     .add_local_dir(".", remote_path="/root/app")
 )
 
-app = modal.App(name="logsense-streamlit", image=image)
+app = modal.App(name="logsense-test", image=image)
 
 @app.function(
-    memory=2048,
-    cpu=2,
+    memory=1024,
+    cpu=1,
     timeout=300,
-    min_containers=1,
 )
-@modal.web_server(port=PORT, startup_timeout=120)
+@modal.web_server(port=PORT, startup_timeout=60)
 def run():
-    """Simple Streamlit server - no complex subprocess management"""
+    """Test minimal Streamlit server"""
     
-    print("[MODAL] Starting Streamlit server...", flush=True)
+    print("[TEST] Starting minimal Streamlit test...", flush=True)
     
-    # Use subprocess.run() - blocks until Streamlit exits
+    # Use the test file instead of main app
     subprocess.run([
-        "streamlit", "run", "skc_log_analyzer_minimal.py",
+        "streamlit", "run", "test_minimal.py",
         "--server.port", str(PORT),
         "--server.address", "0.0.0.0",
         "--server.headless", "true",
