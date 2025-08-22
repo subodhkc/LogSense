@@ -255,8 +255,9 @@ def native_app():
             <div class="upload-area" id="uploadArea">
                 <div class="upload-content">
                     <div class="upload-icon">📁</div>
-                    <p>Drag and drop your log file here or click to browse</p>
-                    <input type="file" id="fileInput" accept=".log,.txt,.out" style="display: none;">
+                    <p>Drag and drop your log file or ZIP archive here or click to browse</p>
+                    <small style="color: #666;">Supported formats: .log, .txt, .out, .zip</small>
+                    <input type="file" id="fileInput" accept=".log,.txt,.out,.zip" style="display: none;">
                     <button type="button" class="btn-secondary" onclick="document.getElementById('fileInput').click()">Choose File</button>
                 </div>
             </div>
@@ -573,6 +574,8 @@ def native_app():
             # Import LogSense analysis modules with error handling
             try:
                 import sys
+                import zipfile
+                import io
                 sys.path.insert(0, "/root/app")
                 print(f"[DEBUG] Python path: {sys.path}")
                 print(f"[DEBUG] Current directory: {os.getcwd()}")
@@ -594,24 +597,68 @@ def native_app():
                     }
                 )
             
+            # Handle ZIP files or regular log files
+            log_content = None
+            file_list = []
+            
+            if file.filename.lower().endswith('.zip'):
+                print(f"[ANALYSIS] Processing ZIP file: {file.filename}")
+                try:
+                    with zipfile.ZipFile(io.BytesIO(content), 'r') as zip_ref:
+                        file_list = zip_ref.namelist()
+                        print(f"[ANALYSIS] ZIP contains: {file_list}")
+                        
+                        # Find the first log file in the ZIP
+                        log_files = [f for f in file_list if f.lower().endswith(('.log', '.txt', '.out'))]
+                        if not log_files:
+                            return JSONResponse(
+                                status_code=400,
+                                content={
+                                    "success": False,
+                                    "detail": "No log files found in ZIP archive",
+                                    "files_found": file_list
+                                }
+                            )
+                        
+                        # Extract the first log file
+                        log_file = log_files[0]
+                        log_content = zip_ref.read(log_file)
+                        print(f"[ANALYSIS] Extracted log file: {log_file} ({len(log_content)} bytes)")
+                        
+                except zipfile.BadZipFile:
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "success": False,
+                            "detail": "Invalid ZIP file format"
+                        }
+                    )
+            else:
+                log_content = content
+                print(f"[ANALYSIS] Processing regular log file: {file.filename}")
+            
             # Create temporary file for analysis
             with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.log') as tmp_file:
-                tmp_file.write(content)
+                tmp_file.write(log_content)
                 tmp_path = tmp_file.name
             
             try:
                 # Step 1: Parse log file and extract events
-                print(f"[ANALYSIS] Parsing log file: {file.filename}")
+                print(f"[ANALYSIS] Parsing log content ({len(log_content)} bytes)")
                 events = analysis.parse_log_file(tmp_path)
                 events_count = len(events) if events else 0
                 
                 # Step 2: Basic analysis results
                 analysis_result = {
                     "file_processed": True,
+                    "original_file": file.filename,
                     "file_size": len(content),
+                    "log_content_size": len(log_content),
                     "events_count": events_count,
-                    "content_preview": content[:300].decode('utf-8', errors='ignore'),
-                    "lines_count": content.count(b'\n'),
+                    "content_preview": log_content[:300].decode('utf-8', errors='ignore'),
+                    "lines_count": log_content.count(b'\n'),
+                    "is_zip": file.filename.lower().endswith('.zip'),
+                    "zip_contents": file_list if file_list else None
                 }
                 
                 # Step 3: AI Analysis based on user engine selections
