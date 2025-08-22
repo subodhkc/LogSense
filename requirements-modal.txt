@@ -6,7 +6,7 @@ streamlit>=1.28.0
 pandas
 matplotlib
 numpy
-fastapi[standard]>=3.6.0
+fastapi[standard]>=0.100.0
 seaborn>=0.12.0
 plotly>=5.15.0
 altair>=5.0.0
