@@ -78,6 +78,13 @@ def format_logs_for_ai(events, metadata=None, test_results=None, context=None):
     return "\n".join(lines)
 
 def analyze_with_ai(events, metadata=None, test_results=None, context=None, offline=True):
+    """
+    Quick fix: Skip offline analysis in Modal deployment to prevent hanging
+    """
+    # Force cloud AI in Modal deployment to prevent hanging
+    if offline:
+        offline = False
+        print("[AI_RCA] Forcing cloud AI mode to prevent hanging on missing dependencies")
     # Check if this is a chat mode interaction
     is_chat_mode = context and context.get("chat_mode", False)
     
@@ -110,88 +117,103 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
             if context.get("build_changes"):
                 context_info += f"**RECENT CHANGES:** {context['build_changes']}\n"
         
+        formatted_logs = format_logs_for_ai(events, metadata, test_results, context)
+        
         prompt = (
             "You are a senior QA automation engineer and SME on LOG analysis and expert in log diagnostics.\n"
             "You are reviewing system provisioning or installation logs from BIOS updates, firmware flashing, OS imaging, or agent deployments.\n"
             f"{context_info}\n"
             "Your task is to analyze the logs and produce a structured root cause analysis (RCA) report for technical stakeholders.\n"
             "Be concise, evidence-driven, and focus on the user's specific issue. Correlate log events with the reported problem.\n\n"
-
             "Respond in markdown format with the following sections:\n\n"
             "1. **Issue Correlation**  \n"
             "How do the log events correlate with the user's reported issue? What patterns match their description?\n\n"
-            
             "2. **Log Overview**  \n"
             "Summarize the system operations observed in the logs — including install attempts, reboots, service changes, etc.\n\n"
-
             "3. **Key Events (ERROR/CRITICAL)**  \n"
-            "List up to 5 major ERROR or CRITICAL entries. Include timestamp, component, and brief description.\n\n"
-
-            "4. **Root Cause Analysis**  \n"
-            "Explain what most likely caused the failure(s). Consider the user's context and recent changes.\n\n"
-
-            "5. **Targeted Fixes**  \n"
-            "Give practical recommendations specific to the user's environment and deployment method.\n\n"
-
-            "6. **Severity & Impact Rating**  \n"
-            "Rate the severity as LOW / MEDIUM / HIGH and justify based on user's business impact.\n\n"
-
-            "7. **Prevention & Monitoring**  \n"
-            "Suggest how to prevent this issue and what to monitor going forward.\n\n"
-
-            "If no serious issues are detected, focus on the user's reported symptoms and suggest investigation areas.\n"
-            "Keep your answer structured, clean, and technical. Use bullet points for lists when helpful.\n\n"
+            "List the most critical errors and their potential impact.\n\n"
+            f"=== LOG DATA ===\n{formatted_logs}\n\nAnalysis:"
         )
- 
-    log_text = format_logs_for_ai(events, metadata, test_results, context)
-    safe_prompt = log_text[:2048]  # Increased limit for more context
-    prompt += safe_prompt
 
-    # ----- OFFLINE MODE (Phi-2 or legacy) -----
+    # Try offline AI first if requested
     if offline:
         try:
-            if MODEL_BACKEND == "phi2":
-                logger.info("Running Phi-2 offline RCA (with optional LoRA)...")
-                global phi2_summarize
-                if phi2_summarize is None:
-                    # Import here to avoid importing torch during app startup
-                    from modules.phi2_inference_lora import phi2_summarize as _phi2_sum
-                    phi2_summarize = _phi2_sum
-                completion = phi2_summarize(prompt, max_tokens=250)
-                return completion or ""
-            else:
-                # Legacy path kept for one release; lazy import to avoid heavy deps
-                logger.info("Running legacy offline RCA (DistilGPT-2)...")
-                from legacy.distil_pipeline import legacy_generate
-                return legacy_generate(safe_prompt, max_new_tokens=250)
-        except Exception as e:
-            logger.error(f"Offline model failed: {e}")
-            return "Offline model failed. Try enabling OpenAI fallback if available."
-
-    # ----- OPENAI MODE -----
-    if OPENAI_API_KEY:
-        # Retry with exponential backoff, avoid logging prompt content
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        attempts = 3
-        backoff = 1.5
-        for i in range(attempts):
+            # Quick dependency check before attempting model loading
             try:
-                logger.info("Using OpenAI for RCA (attempt %d/%d)...", i + 1, attempts)
+                import torch
+                import transformers
+                logger.info("ML dependencies available, attempting offline analysis...")
+                
+                # Try Phi-2 model with timeout protection (Windows compatible)
+                try:
+                    import threading
+                    import time
+                    
+                    result_container = {"result": None, "error": None}
+                    
+                    def load_and_run():
+                        try:
+                            from modules.phi2_inference import phi2_summarize
+                            logger.info("Using Phi-2 model for offline analysis...")
+                            result_container["result"] = phi2_summarize(prompt, max_tokens=300)
+                        except Exception as e:
+                            result_container["error"] = str(e)
+                    
+                    # Run with timeout using threading
+                    thread = threading.Thread(target=load_and_run)
+                    thread.daemon = True
+                    thread.start()
+                    thread.join(timeout=30)  # 30 second timeout
+                    
+                    if thread.is_alive():
+                        logger.warning("Phi-2 model loading timed out after 30 seconds")
+                        raise TimeoutError("Model loading timed out")
+                    
+                    if result_container["error"]:
+                        raise Exception(result_container["error"])
+                    
+                    result = result_container["result"]
+                    if result and len(result.strip()) > 10:
+                        logger.info("Phi-2 analysis completed successfully")
+                        return result.strip()
+                    else:
+                        logger.warning("Phi-2 returned empty or very short result")
+                        
+                except (ImportError, TimeoutError, Exception) as e:
+                    logger.warning(f"Phi-2 model failed: {e}")
+                
+            except ImportError:
+                logger.warning("ML dependencies (torch/transformers) not available, skipping offline analysis")
+                
+        except Exception as e:
+            logger.error(f"Offline AI analysis failed: {e}")
+    
+    # Try OpenAI API if offline failed or not requested
+    if OPENAI_API_KEY:
+        logger.info("Attempting OpenAI API analysis...")
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        for attempt in range(3):
+            try:
                 response = client.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    temperature=0.4,
-                    timeout=OPENAI_TIMEOUT,
+                    model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "You are a helpful QA and RCA assistant."},
+                        {"role": "system", "content": "You are an expert system administrator analyzing log files for root cause analysis."},
                         {"role": "user", "content": prompt}
-                    ]
+                    ],
+                    max_tokens=300,
+                    temperature=0.7
                 )
-                return response.choices[0].message.content
+                
+                result = response.choices[0].message.content.strip()
+                if result:
+                    logger.info("OpenAI analysis completed successfully")
+                    return result
+                    
             except Exception as e:
-                # Log exception type without prompt/body
-                logger.error("OpenAI RCA attempt %d failed: %s", i + 1, e.__class__.__name__)
-                if i < attempts - 1:
-                    sleep_s = backoff ** i
+                logger.warning(f"OpenAI attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    sleep_s = 2 ** attempt
+                    logger.info(f"Retrying in {sleep_s} seconds...")
                     time.sleep(sleep_s)
                 else:
                     logger.error("OpenAI RCA failed after retries: %s", traceback.format_exc())
@@ -200,7 +222,12 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
         logger.warning("No OpenAI API key found in environment.")
 
     # ----- FAILOVER -----
-    return "No valid AI engine configured. Please set OPENAI_API_KEY in .env or enable offline mode."
+    return "AI analysis temporarily unavailable. Local models require GPU resources and cloud API key not configured."
+
+# ----- Main API Function -----
+def generate_summary(events, metadata=None, test_results=None, context=None, offline=True):
+    """Main entry point for AI analysis - wrapper around analyze_with_ai"""
+    return analyze_with_ai(events, metadata, test_results, context, offline)
 
 # For standalone testing only
 if __name__ == "__main__":

@@ -3,18 +3,22 @@ import modal
 
 APP_NAME = "logsense-native"
 
-# Build image with all dependencies
+# Build image with lightweight dependencies and cloud AI fallback
 image = (
     modal.Image.debian_slim(python_version="3.11")
+    .env({"PYTHONIOENCODING": "utf-8", "LC_ALL": "C.UTF-8", "LANG": "C.UTF-8"})
     .pip_install_from_requirements("requirements-modal.txt")
-    .pip_install("fastapi>=0.100.0", "python-multipart")
     .add_local_dir(".", remote_path="/root/app")
 )
 
 app = modal.App(name=APP_NAME, image=image)
 
-# Deploy the FastAPI app with warm containers for ML workloads
-@app.function(timeout=24*60*60, memory=2048, min_containers=1)
+# Deploy the FastAPI app with warm containers and Modal best practices
+@app.function(
+    timeout=300,  # 5 minute timeout for startup
+    memory=2048, 
+    min_containers=1
+)
 @modal.asgi_app()
 def native_app():
     from fastapi import FastAPI, File, UploadFile, Request
@@ -216,7 +220,7 @@ def native_app():
             </div>
         </div>
 
-        <button type="submit" class="btn">Continue to Upload →</button>
+        <button type="submit" class="btn">Continue to Upload -></button>
     </form>
 
     <!-- Upload Section (Step 2) -->
@@ -225,7 +229,7 @@ def native_app():
             <h2>Step 2: Upload Log File</h2>
             <div class="upload-area" id="uploadArea">
                 <div class="upload-content">
-                    <div class="upload-icon">📁</div>
+                    <div class="upload-icon">[FILE]</div>
                     <p>Drag and drop your log file or ZIP archive here or click to browse</p>
                     <small style="color: #666;">Supported formats: .log, .txt, .out, .zip</small>
                     <input type="file" id="fileInput" accept=".log,.txt,.out,.zip" style="display: none;">
@@ -277,7 +281,7 @@ def native_app():
             </div>
             
             <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button type="button" class="btn" id="backToStep1" style="background: #6c757d;">← Back</button>
+                <button type="button" class="btn" id="backToStep1" style="background: #6c757d;"><- Back</button>
                 <button type="button" class="btn" id="analyzeBtn" style="display: none;">Analyze Log File</button>
             </div>
         </div>
@@ -289,7 +293,7 @@ def native_app():
             <h2>Analysis Results</h2>
             <div id="analysisResults"></div>
             <div style="margin-top: 20px;">
-                <button type="button" class="btn" id="backToUpload" style="background: #6c757d;">← Back to Upload</button>
+                <button type="button" class="btn" id="backToUpload" style="background: #6c757d;"><- Back to Upload</button>
                 <button type="button" class="btn" id="generateReport" style="background: #28a745;">Generate PDF Report</button>
                 <button type="button" class="btn" id="exportData" style="background: #17a2b8;">Export Data</button>
             </div>
@@ -500,7 +504,7 @@ def native_app():
                     <p style="margin: 5px 0;"><strong>Name:</strong> ${file.name}</p>
                     <p style="margin: 5px 0;"><strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     <p style="margin: 5px 0;"><strong>Type:</strong> ${file.type || 'Unknown'}</p>
-                    <p style="margin: 5px 0;"><span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">✓ Data will be redacted for compliance</span></p>
+                    <p style="margin: 5px 0;"><span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">[OK] Data will be redacted for compliance</span></p>
                 </div>
             `;
             fileInfo.style.display = 'block';
@@ -646,7 +650,7 @@ def native_app():
                         <div class="info">
                             ${result.capabilities ? Object.entries(result.capabilities).map(([key, value]) => 
                                 `<span style="color: ${value ? 'green' : 'red'}">
-                                    ${value ? '[✓]' : '[✗]'} ${key.replace('_', ' ').toUpperCase()}
+                                    ${value ? '[OK]' : '[X]'} ${key.replace('_', ' ').toUpperCase()}
                                 </span><br>`
                             ).join('') : ''}
                         </div>
@@ -675,12 +679,51 @@ def native_app():
         function exportData() {
             alert('Data export will be implemented in next update');
         }
+        
+        // Generate session timestamp
+        function generateSessionId() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            const second = String(now.getSeconds()).padStart(2, '0');
+            return `${year}${month}${day}_${hour}${minute}${second}`;
+        }
+        
+        // Update footer with session info
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('sessionInfo').textContent = generateSessionId();
+        });
     </script>
+    
+    <!-- Footer Section -->
+    <footer style="
+        position: fixed; 
+        bottom: 0; 
+        left: 0; 
+        right: 0; 
+        background: #2c3e50; 
+        color: #ecf0f1; 
+        padding: 8px 20px; 
+        font-size: 12px; 
+        text-align: center; 
+        border-top: 2px solid #3498db;
+        z-index: 1000;
+    ">
+        LogSense Enterprise | Patent Pending | Session: <span id="sessionInfo">Loading...</span> | Developed by Subodh Kc
+    </footer>
+    
+    <!-- Add bottom padding to body to prevent footer overlap -->
+    <style>
+        body { padding-bottom: 50px; }
+    </style>
 </body>
 </html>"""
 
     @web_app.post("/analyze")
-    async def analyze_log(file: UploadFile = File(...)):
+    async def analyze_log(request: Request, file: UploadFile = File(...)):
         """Analyze uploaded log file with full LogSense capabilities"""
         start_time = datetime.now()
         
@@ -795,17 +838,16 @@ def native_app():
                 
                 # Get analysis preferences from form data
                 try:
-                    form_data_dict = {}
-                    async for key, value in file.form():
-                        form_data_dict[key] = value
+                    # Parse form data from the request
+                    form = await request.form()
                     
-                    analysis_type = form_data_dict.get('analysisType', 'basic')
-                    use_local_llm = form_data_dict.get('localLLM') == 'true'
-                    use_cloud_ai = form_data_dict.get('cloudAI') == 'true'
+                    analysis_type = form.get('analysisType', 'basic')
+                    use_local_llm = form.get('localLLM') == 'true'
+                    use_cloud_ai = form.get('cloudAI') == 'true'
                     
                     print(f"[ANALYSIS] Type: {analysis_type}, Local LLM: {use_local_llm}, Cloud AI: {use_cloud_ai}")
-                except:
-                    print(f"[ANALYSIS] Using default settings: basic analysis")
+                except Exception as e:
+                    print(f"[ANALYSIS] Form parsing failed: {e}, using default settings: basic analysis")
                 
                 # Run AI analysis only if requested
                 ai_summary = None
@@ -813,41 +855,20 @@ def native_app():
                     try:
                         print(f"[AI_RCA] Starting AI analysis with {events_count} events...")
                         
-                        if use_local_llm:
-                            # Use in-house Phi-2 LLM (offline first)
-                            ai_summary = ai_rca.generate_summary(events[:20])  # Limit for performance
-                            
-                            if ai_summary:
+                        # Always use cloud AI in lightweight Modal deployment
+                        if use_cloud_ai or use_local_llm:
+                            print(f"[AI_RCA] Using cloud AI (local models not available in lightweight deployment)...")
+                            ai_summary = ai_rca.generate_summary(events[:20], offline=False)
+                            if ai_summary and "temporarily unavailable" not in ai_summary:
                                 analysis_result["ai_analysis"] = {
                                     "summary": ai_summary,
-                                    "model_used": "phi2_offline",
+                                    "model_used": "openai_cloud",
                                     "events_analyzed": min(events_count, 20),
-                                    "engine_selected": "Local LLM (Phi-2)"
+                                    "engine_selected": "Cloud AI (OpenAI)" if use_cloud_ai else "Cloud AI (Local unavailable)"
                                 }
-                                print(f"[AI_RCA] Local LLM analysis completed successfully")
-                            elif use_cloud_ai:
-                                # Fallback to cloud AI if local fails and cloud is enabled
-                                print(f"[AI_RCA] Local LLM failed, trying cloud AI fallback...")
-                                ai_summary = ai_rca.generate_summary(events[:20])
-                                if ai_summary:
-                                    analysis_result["ai_analysis"] = {
-                                        "summary": ai_summary,
-                                        "model_used": "openai_fallback",
-                                        "events_analyzed": min(events_count, 20),
-                                        "engine_selected": "Cloud AI (OpenAI Fallback)"
-                                    }
+                                print(f"[AI_RCA] Cloud AI analysis completed successfully")
                             else:
-                                analysis_result["ai_analysis"] = {"error": "Local LLM analysis failed and cloud AI not enabled"}
-                        elif use_cloud_ai:
-                            # Use cloud AI directly
-                            ai_summary = ai_rca.generate_summary(events[:20])
-                            if ai_summary:
-                                analysis_result["ai_analysis"] = {
-                                    "summary": ai_summary,
-                                    "model_used": "openai_direct",
-                                    "events_analyzed": min(events_count, 20),
-                                    "engine_selected": "Cloud AI (OpenAI)"
-                                }
+                                analysis_result["ai_analysis"] = {"error": "Cloud AI analysis failed - check API key configuration"}
                         else:
                             analysis_result["ai_analysis"] = {"info": "AI analysis not requested or no engines selected"}
                             

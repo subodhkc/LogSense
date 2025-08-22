@@ -1,28 +1,23 @@
 # Lightweight Modal deployment requirements for LogSense
-# Excludes heavy ML dependencies for faster cold starts
+# FastAPI-only deployment without streamlit
 
-# Core Streamlit and web dependencies
-streamlit>=1.28.0
-pandas
-matplotlib
-numpy
+# Core web dependencies
+pandas>=1.5.0
+numpy>=1.24.0
 fastapi[standard]>=0.100.0
-seaborn>=0.12.0
-plotly>=5.15.0
-altair>=5.0.0
 
 # Lightweight ML (no torch/transformers for web UI)
 scikit-learn>=1.3.0
 
+# Visualization
+matplotlib>=3.6.0
+seaborn>=0.12.0
+
 # PDF and document processing
 reportlab>=4.2.2
-fpdf2>=2.7.0
 
 # Utilities
 python-dotenv>=1.0.0
 pyyaml>=6.0.1
 openai>=1.0.0
-networkx>=3.2.1
-psutil>=5.9.8
 python-dateutil>=2.8.0
-requests>=2.31.0
