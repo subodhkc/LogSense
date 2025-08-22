@@ -12,6 +12,14 @@ PORT = 8000
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install_from_requirements("requirements.txt")
+    # Prebake environment setup to reduce cold start
+    .env({"STREAMLIT_WATCHER_TYPE": "none", 
+          "MODEL_BACKEND": "openai",
+          "DISABLE_ML_MODELS": "true",
+          "PYTHONPATH": "/root/app"})
+    .workdir("/root/app")
+    # Pre-warm Streamlit installation
+    .run_commands("python -c 'import streamlit; print(\"Streamlit prebaked\")'")
 )
 
 # Optional cache-buster to force a rebuild ONLY when explicitly requested.
@@ -37,6 +45,9 @@ ECON = dict(
 @modal.web_server(port=PORT, startup_timeout=60)
 def run():
     import time
+    import sys
+    
+    print("🚀 Modal web server starting...", flush=True)
     
     # Start Streamlit bound to external iface and to the SAME port as web_server
     cmd = (
@@ -48,10 +59,14 @@ def run():
         f"--server.enableXsrfProtection false"
     )
     
-    process = subprocess.Popen(cmd, shell=True)
+    print(f"📡 Starting Streamlit: {cmd}", flush=True)
+    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     
     # Give Streamlit time to start
+    print("⏳ Waiting 5s for Streamlit boot...", flush=True)
     time.sleep(5)
+    
+    print("✅ Modal web server ready - Streamlit should be accessible", flush=True)
     
     # Keep function alive
     process.wait()
