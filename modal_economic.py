@@ -42,33 +42,37 @@ image = (
     min_containers=0,  # Don't keep containers warm
     timeout=1800, # 30 min timeout
 )
+@modal.concurrent(max_inputs=100)
 @modal.web_server(8000)
 def web():
+    import subprocess
     import os
-    import sys
+    import time
     
     # Set environment variables
     os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
     os.environ["MODEL_BACKEND"] = "openai"  # Use OpenAI instead of local models
     os.environ["DISABLE_ML_MODELS"] = "true"  # Disable heavy ML models
+    os.environ["PYTHONPATH"] = "/app"
     
-    # Ensure Python can find all modules
-    sys.path.insert(0, "/app")
+    # Change to app directory
+    os.chdir("/app")
     
-    # Import and run streamlit properly
-    import streamlit.web.cli as stcli
+    # Use shell=True for proper command execution (ChatGPT's approach)
+    cmd = (
+        "streamlit run skc_log_analyzer.py "
+        "--server.port 8000 "
+        "--server.address 0.0.0.0 "
+        "--server.headless true "
+        "--server.enableCORS false "
+        "--server.enableXsrfProtection false"
+    )
     
-    sys.argv = [
-        "streamlit",
-        "run",
-        "skc_log_analyzer.py",
-        "--server.port=8000",
-        "--server.address=0.0.0.0",
-        "--server.headless=true",
-        "--server.runOnSave=false"
-    ]
+    # Start Streamlit in background
+    subprocess.Popen(cmd, shell=True)
     
-    stcli.main()
+    # Give Streamlit time to start before Modal begins serving
+    time.sleep(5)
 
 # On-demand GPU function for heavy ML tasks only
 @app.function(
