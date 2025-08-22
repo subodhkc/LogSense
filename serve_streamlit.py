@@ -11,7 +11,7 @@ PORT = 8000
 # IMPORTANT: add_local_dir must be applied LAST per Modal guidance.
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements.txt")
+    .pip_install_from_requirements("requirements-modal.txt")
     # Prebake environment setup to reduce cold start
     .env({"STREAMLIT_WATCHER_TYPE": "none", 
           "MODEL_BACKEND": "openai",
