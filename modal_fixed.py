@@ -33,7 +33,6 @@ OPTIMIZED_CONFIG = dict(
     buffer_containers=0,   # No buffer during debugging
     memory=2048,          # Adequate memory for analysis
     cpu=2,                # Sufficient CPU
-    retries=modal.Retries(max_retries=0)  # Prevent restart loops during debugging
 )
 
 # Health check endpoint for debugging
