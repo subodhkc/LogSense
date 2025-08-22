@@ -6,7 +6,7 @@ import modal
 
 app = modal.App("logsense-economic")
 
-# Lightweight image
+# Lightweight image with all required dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("git")
@@ -19,10 +19,16 @@ image = (
         "openai>=1.0.0",
         "python-dotenv>=1.0.0",
         "reportlab>=4.2.2",
-        "pyyaml>=6.0.1"
-        # Removed: torch, transformers, peft (heavy ML libs)
+        "pyyaml>=6.0.1",
+        "matplotlib>=3.7.0",
+        "seaborn>=0.12.0",
+        "plotly>=5.15.0",
+        "pypdf>=3.0.0",
+        "altair>=5.0.0"
+        # Still excluding: torch, transformers, peft (heavy ML libs)
     )
     .workdir("/app")
+    .env({"PYTHONPATH": "/app"})  # Fix import paths
 )
 
 # CPU-only web server (no GPU unless needed)
@@ -39,13 +45,18 @@ image = (
 @modal.web_server(8000)
 def web():
     import os
+    import sys
     
+    # Set environment variables
     os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
     os.environ["MODEL_BACKEND"] = "openai"  # Use OpenAI instead of local models
+    os.environ["DISABLE_ML_MODELS"] = "true"  # Disable heavy ML models
+    
+    # Ensure Python can find all modules
+    sys.path.insert(0, "/app")
     
     # Import and run streamlit properly
     import streamlit.web.cli as stcli
-    import sys
     
     sys.argv = [
         "streamlit",
@@ -53,7 +64,8 @@ def web():
         "skc_log_analyzer.py",
         "--server.port=8000",
         "--server.address=0.0.0.0",
-        "--server.headless=true"
+        "--server.headless=true",
+        "--server.runOnSave=false"
     ]
     
     stcli.main()
