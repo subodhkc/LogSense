@@ -1,7 +1,7 @@
 # serve_streamlit.py
 import shlex, subprocess
 from pathlib import Path
-import os, time, signal
+import os, time
 import socket, threading
 import requests
 import psutil
@@ -54,23 +54,6 @@ def run():
     
     print("[MODAL] Web server starting...", flush=True)
     
-    # Global process reference for signal handling
-    streamlit_process = None
-    
-    def signal_handler(signum, frame):
-        print(f"[SIGNAL] Received signal {signum}, forwarding to Streamlit...", flush=True)
-        if streamlit_process and streamlit_process.poll() is None:
-            streamlit_process.terminate()
-            try:
-                streamlit_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                streamlit_process.kill()
-        sys.exit(0)
-    
-    # Register signal handlers for graceful shutdown
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    
     # Start Streamlit bound to external iface and to the SAME port as web_server
     cmd = (
         f"streamlit run {shlex.quote(APP_ENTRY_REMOTE)} "
@@ -90,7 +73,6 @@ def run():
         text=True,
         bufsize=1,
     )
-    streamlit_process = process  # Store for signal handling
 
     # Stream logs from Streamlit in a background thread for visibility
     def _pump_logs(proc: subprocess.Popen):
@@ -115,15 +97,14 @@ def run():
                     parent_rss = parent_proc.memory_info().rss / 1024 / 1024  # MB
                     
                     streamlit_rss = 0
-                    if streamlit_process and streamlit_process.poll() is None:
+                    if process and process.poll() is None:
                         try:
-                            streamlit_proc = psutil.Process(streamlit_process.pid)
+                            streamlit_proc = psutil.Process(process.pid)
                             streamlit_rss = streamlit_proc.memory_info().rss / 1024 / 1024  # MB
                         except psutil.NoSuchProcess:
                             pass
-                    
                     print(f"[MEM] Parent: {parent_rss:.1f}MB, Streamlit: {streamlit_rss:.1f}MB", flush=True)
-                    time.sleep(5)
+                    time.sleep(60)  # Check every minute instead of 5 seconds
                 except Exception as e:
                     print(f"[MEM] Watchdog error: {e}", flush=True)
                     time.sleep(10)
