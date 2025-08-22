@@ -69,10 +69,14 @@ def web():
     )
     
     # Start Streamlit in background
-    subprocess.Popen(cmd, shell=True)
+    process = subprocess.Popen(cmd, shell=True)
     
     # Give Streamlit time to start before Modal begins serving
     time.sleep(5)
+    
+    # Keep the function alive - wait for Streamlit process to finish
+    # This prevents Modal from thinking the web server is done
+    process.wait()
 
 # On-demand GPU function for heavy ML tasks only
 @app.function(
