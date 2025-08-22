@@ -47,7 +47,7 @@ def run():
     import time
     import sys
     
-    print("🚀 Modal web server starting...", flush=True)
+    print("[MODAL] Web server starting...", flush=True)
     
     # Start Streamlit bound to external iface and to the SAME port as web_server
     cmd = (
@@ -59,18 +59,18 @@ def run():
         f"--server.enableXsrfProtection false"
     )
     
-    print(f"📡 Starting Streamlit: {cmd}", flush=True)
+    print(f"[STREAMLIT] Starting: {cmd}", flush=True)
     process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     
     # Give Streamlit more time to start and capture output
-    print("⏳ Waiting 10s for Streamlit boot...", flush=True)
+    print("[WAIT] Waiting 10s for Streamlit boot...", flush=True)
     time.sleep(10)
     
     # Check if Streamlit started successfully
     if process.poll() is None:
-        print("✅ Modal web server ready - Streamlit process running", flush=True)
+        print("[SUCCESS] Modal web server ready - Streamlit process running", flush=True)
     else:
-        print("❌ Streamlit process exited early", flush=True)
+        print("[ERROR] Streamlit process exited early", flush=True)
         # Print any error output
         output, _ = process.communicate()
         if output:
