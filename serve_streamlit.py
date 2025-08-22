@@ -3,7 +3,7 @@ import modal
 import subprocess
 import os
 
-APP_ENTRY_REMOTE = "/root/app/skc_log_analyzer.py"
+APP_ENTRY_REMOTE = "skc_log_analyzer_minimal.py"
 PORT = 8000
 
 # Minimal image build
@@ -43,7 +43,7 @@ def run():
     
     # Build command with explicit binding
     cmd = [
-        "streamlit", "run", "skc_log_analyzer_minimal.py",
+        "streamlit", "run", APP_ENTRY_REMOTE,
         "--server.port", str(PORT),
         "--server.address", "0.0.0.0",
         "--server.headless", "true",

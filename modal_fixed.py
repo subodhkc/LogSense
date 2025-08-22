@@ -4,7 +4,7 @@ import modal
 from modal import FilePatternMatcher
 
 APP_NAME = "logsense-streamlit"
-APP_ENTRY = "/root/app/skc_log_analyzer_minimal.py"  # Use minimal version for fast startup
+APP_ENTRY = "skc_log_analyzer_minimal.py"  # Use minimal version for fast startup
 PORT = 8000
 
 # Build optimized image with proper requirements
