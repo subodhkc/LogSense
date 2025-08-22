@@ -25,9 +25,10 @@ ECON = dict(
 )
 
 @app.function(**ECON)
-@modal.concurrent(max_inputs=100)
 @modal.web_server(port=PORT, startup_timeout=60)
 def run():
+    import time
+    
     # Start Streamlit bound to external iface and to the SAME port as web_server
     cmd = (
         f"streamlit run {shlex.quote(APP_ENTRY_REMOTE)} "
@@ -37,4 +38,11 @@ def run():
         f"--server.enableCORS false "
         f"--server.enableXsrfProtection false"
     )
-    subprocess.Popen(cmd, shell=True)
+    
+    process = subprocess.Popen(cmd, shell=True)
+    
+    # Give Streamlit time to start
+    time.sleep(5)
+    
+    # Keep function alive
+    process.wait()
