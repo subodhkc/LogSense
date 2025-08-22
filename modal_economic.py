@@ -38,17 +38,25 @@ image = (
 )
 @modal.web_server(8000)
 def web():
-    import subprocess
     import os
     
     os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
     os.environ["MODEL_BACKEND"] = "openai"  # Use OpenAI instead of local models
     
-    subprocess.run([
-        "streamlit", "run", "skc_log_analyzer.py",
-        "--server.port", "8000",
-        "--server.address", "0.0.0.0"
-    ])
+    # Import and run streamlit properly
+    import streamlit.web.cli as stcli
+    import sys
+    
+    sys.argv = [
+        "streamlit",
+        "run",
+        "skc_log_analyzer.py",
+        "--server.port=8000",
+        "--server.address=0.0.0.0",
+        "--server.headless=true"
+    ]
+    
+    stcli.main()
 
 # On-demand GPU function for heavy ML tasks only
 @app.function(
