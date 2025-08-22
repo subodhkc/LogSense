@@ -245,32 +245,62 @@ def native_app():
             </div>
         </div>
 
-        <div style="text-align: center; margin: 20px 0;">
-            <button type="submit" class="btn btn-success">Apply Configuration & Proceed</button>
-        </div>
+        <button type="submit" class="btn">Continue to Upload →</button>
     </form>
 
+    <!-- Upload Section (Step 2) -->
     <div id="uploadSection" style="display: none;">
-        <div class="upload-area" id="uploadArea">
-            <h3>Log File Upload</h3>
-            <p>Upload ZIP files (recommended) or individual log files</p>
-            <form id="uploadForm" enctype="multipart/form-data">
-                <input type="file" id="fileInput" name="file" accept=".txt,.log,.zip" required multiple>
-                <br><br>
-                <button type="submit" class="btn">Analyze with AI</button>
-            </form>
+        <div class="form-section">
+            <h2>Step 2: Upload Log File</h2>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-content">
+                    <div class="upload-icon">📁</div>
+                    <p>Drag and drop your log file here or click to browse</p>
+                    <input type="file" id="fileInput" accept=".log,.txt,.out" style="display: none;">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('fileInput').click()">Choose File</button>
+                </div>
+            </div>
+            <div class="file-info" id="fileInfo" style="display: none;"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn" id="backToStep1" style="background: #6c757d;">← Back</button>
+                <button type="button" class="btn" id="analyzeBtn" style="display: none;">Analyze Log File</button>
+            </div>
         </div>
     </div>
-    
-    <div id="results" class="results" style="display: none;">
-        <h3>Analysis Results</h3>
-        <div id="metricsCards" class="metric-cards"></div>
-        <div id="resultsContent"></div>
+
+    <!-- Results Section (Step 3) -->
+    <div id="resultsSection" style="display: none;">
+        <div class="results">
+            <h2>Analysis Results</h2>
+            <div id="analysisResults"></div>
+            <div style="margin-top: 20px;">
+                <button type="button" class="btn" id="backToUpload" style="background: #6c757d;">← Back to Upload</button>
+                <button type="button" class="btn" style="background: #28a745;">Generate PDF Report</button>
+                <button type="button" class="btn" style="background: #17a2b8;">Export Data</button>
+            </div>
+        </div>
     </div>
-    
+
     <script>
-        // Initialize session
-        document.getElementById('sessionId').textContent = new Date().toISOString().slice(0,19).replace(/[-:]/g, '').replace('T', '_');
+        // Generate session ID
+        document.getElementById('sessionId').textContent = 'LS-' + Date.now().toString(36).toUpperCase();
+        
+        // Add CSS for secondary button
+        const style = document.createElement('style');
+        style.textContent = `
+            .btn-secondary { 
+                background: #6c757d; 
+                color: white; 
+                padding: 10px 20px; 
+                border: none; 
+                border-radius: 5px; 
+                cursor: pointer; 
+                font-size: 14px; 
+                transition: background 0.3s; 
+            }
+            .btn-secondary:hover { background: #5a6268; }
+        `;
+        document.head.appendChild(style);
         
         // Collapsible sections
         document.querySelectorAll('.collapsible').forEach(button => {
@@ -328,6 +358,28 @@ def native_app():
                 proxyConfig: document.getElementById('proxyConfig').value,
                 privateNotes: document.getElementById('privateNotes').value
             };
+        });
+
+        // Back button functionality
+        document.getElementById('backToStep1').addEventListener('click', function() {
+            // Hide upload section, show form
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('contextForm').style.display = 'block';
+            
+            // Update progress
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step1').classList.remove('completed');
+            document.getElementById('step1').classList.add('active');
+        });
+
+        document.getElementById('backToUpload').addEventListener('click', function() {
+            // Hide results section, show upload
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('uploadSection').style.display = 'block';
+            
+            // Update progress
+            document.getElementById('step3').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
         });
         
         // Drag and drop functionality
@@ -520,11 +572,19 @@ def native_app():
             
             # Import LogSense analysis modules with error handling
             try:
+                import sys
+                sys.path.insert(0, "/root/app")
+                print(f"[DEBUG] Python path: {sys.path}")
+                print(f"[DEBUG] Current directory: {os.getcwd()}")
+                print(f"[DEBUG] Files in directory: {os.listdir('.')}")
+                
                 import analysis
                 import ai_rca
                 import redaction
+                print(f"[DEBUG] Successfully imported analysis modules")
             except ImportError as e:
                 print(f"[ERROR] Failed to import analysis modules: {e}")
+                print(f"[ERROR] Available files: {[f for f in os.listdir('.') if f.endswith('.py')]}")
                 return JSONResponse(
                     status_code=500,
                     content={
