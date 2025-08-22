@@ -35,8 +35,9 @@ def native_app():
     <title>LogSense - Enterprise Log Analysis</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1400px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 1400px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; }
         .header { text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .progress-bar { display: flex; justify-content: space-between; margin: 20px 0; padding: 0 20px; }
         .progress-step { text-align: center; flex: 1; position: relative; }
@@ -77,7 +78,7 @@ def native_app():
 </head>
 <body>
     <div class="header">
-        <h1>🔍 LogSense</h1>
+        <h1>LogSense</h1>
         <h3>Enterprise Log Analysis Platform</h3>
         <p>Intelligent diagnostics for system provisioning and deployment</p>
         <p><strong>Session:</strong> <span id="sessionId"></span></p>
@@ -108,7 +109,7 @@ def native_app():
 
     <form id="contextForm">
         <div class="form-section">
-            <h3>👤 User & Test Information</h3>
+            <h3>User & Test Information</h3>
             <div class="form-row">
                 <div class="form-group">
                     <label for="userName">Your Name *</label>
@@ -139,7 +140,7 @@ def native_app():
         </div>
 
         <div class="form-section">
-            <h3>🔍 Issue Description & Context</h3>
+            <h3>Issue Description & Context</h3>
             <div class="form-group">
                 <label for="issueDescription">Describe the Issue *</label>
                 <textarea id="issueDescription" name="issueDescription" placeholder="What problem are you experiencing? Be specific about symptoms, error messages, and impact." required></textarea>
@@ -173,7 +174,7 @@ def native_app():
             </div>
         </div>
 
-        <button type="button" class="collapsible">📋 Additional Information (Optional)</button>
+        <button type="button" class="collapsible">Additional Information (Optional)</button>
         <div class="content">
             <div class="form-section">
                 <div class="form-row">
@@ -214,24 +215,24 @@ def native_app():
         </div>
 
         <div style="text-align: center; margin: 20px 0;">
-            <button type="submit" class="btn btn-success">✅ Apply Configuration & Proceed</button>
+            <button type="submit" class="btn btn-success">Apply Configuration & Proceed</button>
         </div>
     </form>
 
     <div id="uploadSection" style="display: none;">
         <div class="upload-area" id="uploadArea">
-            <h3>📁 Log File Upload</h3>
+            <h3>Log File Upload</h3>
             <p>Upload ZIP files (recommended) or individual log files</p>
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="file" id="fileInput" name="file" accept=".txt,.log,.zip" required multiple>
                 <br><br>
-                <button type="submit" class="btn">🚀 Analyze with AI</button>
+                <button type="submit" class="btn">Analyze with AI</button>
             </form>
         </div>
     </div>
     
     <div id="results" class="results" style="display: none;">
-        <h3>📊 Analysis Results</h3>
+        <h3>Analysis Results</h3>
         <div id="metricsCards" class="metric-cards"></div>
         <div id="resultsContent"></div>
     </div>
@@ -339,7 +340,7 @@ def native_app():
             if (!fileInput.files[0]) { alert('Please select a file'); return; }
             
             results.style.display = 'block';
-            resultsContent.innerHTML = '<div>🔄 Analyzing log file with Phi-2 LLM...</div>';
+            resultsContent.innerHTML = '<div>Analyzing log file with Phi-2 LLM...</div>';
             
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
@@ -390,7 +391,7 @@ def native_app():
                     `;
                     
                     resultsContent.innerHTML = `
-                        <div class="success">✅ Analysis Complete!</div>
+                        <div class="success">Analysis Complete!</div>
                         <div class="info">
                             <strong>User:</strong> ${window.userContext?.userName || 'Anonymous'}<br>
                             <strong>Application:</strong> ${window.userContext?.appName || 'N/A'}<br>
@@ -401,7 +402,7 @@ def native_app():
                         
                         ${result.analysis.ai_analysis ? `
                         <div class="ai-section">
-                            <h4>🧠 AI Root Cause Analysis (${result.analysis.ai_analysis.model_used || 'Phi-2'})</h4>
+                            <h4>AI Root Cause Analysis (${result.analysis.ai_analysis.model_used || 'Phi-2'})</h4>
                             <p><strong>Summary:</strong> ${result.analysis.ai_analysis.summary || result.analysis.ai_analysis.error}</p>
                             ${result.analysis.ai_analysis.events_analyzed ? `<p><strong>Events Analyzed:</strong> ${result.analysis.ai_analysis.events_analyzed}</p>` : ''}
                             ${window.userContext?.issueDescription ? `<p><strong>Issue Context:</strong> ${window.userContext.issueDescription}</p>` : ''}
@@ -409,7 +410,7 @@ def native_app():
                         ` : ''}
                         
                         ${result.analysis.event_distribution ? `
-                        <h4>📊 Event Distribution</h4>
+                        <h4>Event Distribution</h4>
                         <div>${Object.entries(result.analysis.event_distribution).map(([type, count]) => 
                             `<div class="event-item">
                                 <strong>${type}:</strong> ${count} events
@@ -422,7 +423,7 @@ def native_app():
                         ` : ''}
                         
                         ${result.analysis.sample_events ? `
-                        <h4>📝 Sample Events</h4>
+                        <h4>Sample Events</h4>
                         <div>${result.analysis.sample_events.map(event => 
                             `<div class="event-item">
                                 <strong>${event.timestamp}</strong> 
@@ -435,25 +436,25 @@ def native_app():
                         ).join('')}</div>
                         ` : ''}
                         
-                        <h4>🔧 System Capabilities</h4>
+                        <h4>System Capabilities</h4>
                         <div class="info">
                             ${result.capabilities ? Object.entries(result.capabilities).map(([key, value]) => 
                                 `<span style="color: ${value ? 'green' : 'red'}">
-                                    ${value ? '✅' : '❌'} ${key.replace('_', ' ').toUpperCase()}
+                                    ${value ? '[✓]' : '[✗]'} ${key.replace('_', ' ').toUpperCase()}
                                 </span><br>`
                             ).join('') : ''}
                         </div>
                         
                         <div style="text-align: center; margin-top: 30px;">
-                            <button class="btn btn-success" onclick="generateReport()">📄 Generate PDF Report</button>
-                            <button class="btn btn-warning" onclick="exportData()">💾 Export Data</button>
+                            <button class="btn btn-success" onclick="generateReport()">Generate PDF Report</button>
+                            <button class="btn btn-warning" onclick="exportData()">Export Data</button>
                         </div>
                     `;
                 } else {
-                    resultsContent.innerHTML = `<div class="error">❌ Error: ${result.detail}</div>`;
+                    resultsContent.innerHTML = `<div class="error">Error: ${result.detail}</div>`;
                 }
             } catch (error) {
-                resultsContent.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+                resultsContent.innerHTML = `<div class="error">Network Error: ${error.message}</div>`;
             }
         });
         
