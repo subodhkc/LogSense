@@ -1,5 +1,11 @@
 [server]
 maxMessageSize = 300
+port = 8000
+address = "0.0.0.0"
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+fileWatcherType = "none"
 
 [theme]
 # Corporate blue theme

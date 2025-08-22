@@ -4,7 +4,7 @@ import modal
 from modal import FilePatternMatcher
 
 APP_NAME = "logsense-streamlit"
-APP_ENTRY = "/root/app/skc_log_analyzer.py"
+APP_ENTRY = "/root/app/skc_log_analyzer_minimal.py"
 PORT = 8000
 
 # Build a lean image and pre-bake deps. Exclude heavy stuff to cut cold-starts.
@@ -17,10 +17,10 @@ image = (
 
 app = modal.App(name=APP_NAME, image=image)
 
-# Cost controls while debugging
-ECON = dict(
-    timeout=60,
-    scaledown_window=10,    # make first green run reliable; later drop to 2–5
+# ECON for web server: long timeout, slower scaledown for stability
+WEB_ECON = dict(
+    timeout=24 * 60 * 60,                     # 24h: web servers should not time out
+    scaledown_window=120,                     # allow container to stay up between hits
     min_containers=0,
     buffer_containers=0,
 )
@@ -31,11 +31,15 @@ ECON = dict(
 def health():
     return {"ok": True}
 
-# The UI endpoint. IMPORTANT: do NOT call stcli.main(); spawn a background process.
-@app.function(**ECON)
-@modal.web_server(port=PORT, startup_timeout=180, label="run")
+# The UI endpoint with proper lifecycle management
+@app.function(**WEB_ECON)
+@modal.web_server(port=PORT, startup_timeout=300, label="run")
 def run():
     os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+    # optional stability knobs:
+    os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
+    os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
+
     cmd = (
         f"streamlit run {shlex.quote(APP_ENTRY)} "
         f"--server.port {PORT} "
@@ -44,4 +48,5 @@ def run():
         f"--server.enableCORS false "
         f"--server.enableXsrfProtection false"
     )
-    subprocess.Popen(cmd, shell=True)
+    proc = subprocess.Popen(cmd, shell=True)
+    proc.wait()  # <— CRITICAL: ties container lifecycle to the Streamlit process
