@@ -42,7 +42,7 @@ ECON = dict(
 )
 
 @app.function(**ECON)
-@modal.web_server(port=PORT, startup_timeout=60)
+@modal.web_server(port=PORT, startup_timeout=180)
 def run():
     import time
     import sys
@@ -62,11 +62,19 @@ def run():
     print(f"📡 Starting Streamlit: {cmd}", flush=True)
     process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     
-    # Give Streamlit time to start
-    print("⏳ Waiting 5s for Streamlit boot...", flush=True)
-    time.sleep(5)
+    # Give Streamlit more time to start and capture output
+    print("⏳ Waiting 10s for Streamlit boot...", flush=True)
+    time.sleep(10)
     
-    print("✅ Modal web server ready - Streamlit should be accessible", flush=True)
+    # Check if Streamlit started successfully
+    if process.poll() is None:
+        print("✅ Modal web server ready - Streamlit process running", flush=True)
+    else:
+        print("❌ Streamlit process exited early", flush=True)
+        # Print any error output
+        output, _ = process.communicate()
+        if output:
+            print(f"Streamlit output: {output}", flush=True)
     
     # Keep function alive
     process.wait()
