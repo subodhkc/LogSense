@@ -109,16 +109,38 @@ def run():
         t_err = threading.Thread(target=_reader, args=(proc.stderr, "STDERR"), daemon=True)
         t_out.start(); t_err.start()
 
-        # Monitor for 30 seconds to see startup; if it exits early, return
+        # Wait for Streamlit to be ready by checking if port is accepting connections
+        import socket
         start_time = time.time()
-        while time.time() - start_time < 30:
+        streamlit_ready = False
+        
+        while time.time() - start_time < 120:  # Wait up to 2 minutes
             if proc.poll() is not None:
                 print(f"[MODAL] Process exited early with code: {proc.returncode}", flush=True)
                 return
-            time.sleep(1)
-            print(f"[MODAL] Process still running after {int(time.time() - start_time)}s", flush=True)
+                
+            # Check if Streamlit is accepting connections
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex(('localhost', PORT))
+                sock.close()
+                if result == 0:
+                    print(f"[MODAL] Streamlit is accepting connections after {int(time.time() - start_time)}s", flush=True)
+                    streamlit_ready = True
+                    break
+            except:
+                pass
+                
+            time.sleep(2)
+            print(f"[MODAL] Waiting for Streamlit to accept connections... {int(time.time() - start_time)}s", flush=True)
 
-        print(f"[MODAL] Streamlit appears to be starting, waiting indefinitely...", flush=True)
+        if not streamlit_ready:
+            print(f"[MODAL] ERROR: Streamlit failed to accept connections after {int(time.time() - start_time)}s", flush=True)
+            proc.terminate()
+            return
+
+        print(f"[MODAL] Streamlit is ready and accepting connections!", flush=True)
         proc.wait()
 
     except Exception as e:
