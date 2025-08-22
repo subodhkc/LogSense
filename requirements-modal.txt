@@ -3,17 +3,16 @@
 
 # Core Streamlit and web dependencies
 streamlit>=1.28.0
-pandas>=1.5.0
-numpy>=1.24.0
-
-# Lightweight ML (no torch/transformers for web UI)
-scikit-learn>=1.3.0
-
-# Visualization
-matplotlib>=3.6.0
+pandas
+matplotlib
+numpy
+fastapi[standard]>=3.6.0
 seaborn>=0.12.0
 plotly>=5.15.0
 altair>=5.0.0
+
+# Lightweight ML (no torch/transformers for web UI)
+scikit-learn>=1.3.0
 
 # PDF and document processing
 reportlab>=4.2.2

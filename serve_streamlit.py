@@ -49,7 +49,7 @@ def run():
 
 # Health check endpoint for debugging
 @app.function(timeout=15)
-@modal.web_endpoint(label="health")
+@modal.fastapi_endpoint(label="health")
 def health():
     """Health check endpoint to verify Modal routing"""
     return {"status": "ok", "service": "logsense-streamlit"}
