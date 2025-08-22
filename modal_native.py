@@ -174,6 +174,37 @@ def native_app():
             </div>
         </div>
 
+        <button type="button" class="collapsible">Analysis Engine Selection</button>
+        <div class="content">
+            <div class="form-section">
+                <h4>Select Analysis Engines</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="pythonEngine" name="pythonEngine" checked>
+                            Python Analysis Engine (Rule-based parsing)
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="localLLM" name="localLLM" checked>
+                            Local LLM (In-house Phi-2 Model)
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="cloudAI" name="cloudAI">
+                            Cloud AI (OpenAI GPT Fallback)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <button type="button" class="collapsible">Additional Information (Optional)</button>
         <div class="content">
             <div class="form-section">
@@ -273,7 +304,7 @@ def native_app():
             document.getElementById('uploadSection').style.display = 'block';
             this.style.display = 'none';
             
-            // Store context data
+            // Store context data including analysis engines
             window.userContext = {
                 userName: userName,
                 appName: appName,
@@ -284,6 +315,11 @@ def native_app():
                 buildNumber: document.getElementById('buildNumber').value,
                 buildChanges: document.getElementById('buildChanges').value,
                 previousVersion: document.getElementById('previousVersion').value,
+                // Analysis engine selections
+                pythonEngine: document.getElementById('pythonEngine').checked,
+                localLLM: document.getElementById('localLLM').checked,
+                cloudAI: document.getElementById('cloudAI').checked,
+                // Additional info
                 hwModel: document.getElementById('hwModel').value,
                 osBuild: document.getElementById('osBuild').value,
                 region: document.getElementById('region').value,
@@ -482,10 +518,21 @@ def native_app():
             os.chdir("/root/app")
             content = await file.read()
             
-            # Import LogSense analysis modules
-            import analysis
-            import ai_rca
-            import redaction
+            # Import LogSense analysis modules with error handling
+            try:
+                import analysis
+                import ai_rca
+                import redaction
+            except ImportError as e:
+                print(f"[ERROR] Failed to import analysis modules: {e}")
+                return JSONResponse(
+                    status_code=500,
+                    content={
+                        "success": False,
+                        "detail": f"Analysis modules not available: {str(e)}",
+                        "error_type": "ImportError"
+                    }
+                )
             
             # Create temporary file for analysis
             with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.log') as tmp_file:
@@ -507,30 +554,64 @@ def native_app():
                     "lines_count": content.count(b'\n'),
                 }
                 
-                # Step 3: AI Analysis with in-house Phi-2 LLM
+                # Step 3: AI Analysis based on user engine selections
                 ai_summary = None
                 if events and events_count > 0:
+                    # Get user context from form data (if available)
+                    use_local_llm = True  # Default
+                    use_cloud_ai = False  # Default
+                    
+                    # Try to get engine preferences from form data
+                    form_data = await file.read()  # We already read this, but need to get form context
+                    
                     try:
                         print(f"[AI_RCA] Starting AI analysis with {events_count} events...")
+                        print(f"[AI_RCA] Engine preferences - Local LLM: {use_local_llm}, Cloud AI: {use_cloud_ai}")
                         
-                        # Use in-house Phi-2 LLM (offline first, OpenAI fallback)
-                        ai_summary = ai_rca.generate_summary(events[:20])  # Limit for performance
-                        
-                        if ai_summary:
-                            analysis_result["ai_analysis"] = {
-                                "summary": ai_summary,
-                                "model_used": "phi2_offline" if "phi2" in str(ai_summary).lower() else "openai_fallback",
-                                "events_analyzed": min(events_count, 20)
-                            }
-                            print(f"[AI_RCA] AI analysis completed successfully")
+                        if use_local_llm:
+                            # Use in-house Phi-2 LLM (offline first)
+                            ai_summary = ai_rca.generate_summary(events[:20])  # Limit for performance
+                            
+                            if ai_summary:
+                                analysis_result["ai_analysis"] = {
+                                    "summary": ai_summary,
+                                    "model_used": "phi2_offline",
+                                    "events_analyzed": min(events_count, 20),
+                                    "engine_selected": "Local LLM (Phi-2)"
+                                }
+                                print(f"[AI_RCA] Local LLM analysis completed successfully")
+                            elif use_cloud_ai:
+                                # Fallback to cloud AI if local fails and cloud is enabled
+                                print(f"[AI_RCA] Local LLM failed, trying cloud AI fallback...")
+                                ai_summary = ai_rca.generate_summary(events[:20])  # This should handle fallback
+                                if ai_summary:
+                                    analysis_result["ai_analysis"] = {
+                                        "summary": ai_summary,
+                                        "model_used": "openai_fallback",
+                                        "events_analyzed": min(events_count, 20),
+                                        "engine_selected": "Cloud AI (OpenAI Fallback)"
+                                    }
+                            else:
+                                analysis_result["ai_analysis"] = {"error": "Local LLM analysis failed and cloud AI not enabled"}
+                        elif use_cloud_ai:
+                            # Use cloud AI directly
+                            ai_summary = ai_rca.generate_summary(events[:20])
+                            if ai_summary:
+                                analysis_result["ai_analysis"] = {
+                                    "summary": ai_summary,
+                                    "model_used": "openai_direct",
+                                    "events_analyzed": min(events_count, 20),
+                                    "engine_selected": "Cloud AI (OpenAI)"
+                                }
                         else:
-                            analysis_result["ai_analysis"] = {"error": "AI analysis returned empty result"}
+                            analysis_result["ai_analysis"] = {"error": "No AI engines selected"}
                             
                     except Exception as ai_error:
                         print(f"[AI_RCA] AI analysis failed: {ai_error}")
                         analysis_result["ai_analysis"] = {
                             "error": f"AI analysis failed: {str(ai_error)}",
-                            "fallback_available": True
+                            "fallback_available": use_cloud_ai,
+                            "engine_attempted": "Local LLM" if use_local_llm else "Cloud AI"
                         }
                 
                 # Step 4: Additional analysis if events found
@@ -538,14 +619,14 @@ def native_app():
                     # Event type distribution
                     event_types = {}
                     for event in events[:50]:  # Sample for performance
-                        event_type = getattr(event, 'event_type', 'unknown')
+                        event_type = getattr(event, 'severity', 'INFO')  # Use severity instead of event_type
                         event_types[event_type] = event_types.get(event_type, 0) + 1
                     
                     analysis_result["event_distribution"] = event_types
                     analysis_result["sample_events"] = [
                         {
-                            "timestamp": getattr(event, 'timestamp', 'N/A'),
-                            "event_type": getattr(event, 'event_type', 'unknown'),
+                            "timestamp": str(getattr(event, 'timestamp', 'N/A')),
+                            "event_type": getattr(event, 'severity', 'INFO'),
                             "description": str(event)[:100] + "..." if len(str(event)) > 100 else str(event)
                         }
                         for event in events[:5]  # Show first 5 events

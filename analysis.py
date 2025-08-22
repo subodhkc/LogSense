@@ -145,3 +145,14 @@ def parse_logs(text, fname: str = "log.txt"):
         pass
     events.sort(key=lambda x: x.timestamp)
     return events
+
+# Alias for compatibility with modal_native.py
+def parse_log_file(file_path):
+    """Parse a log file and return events list."""
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        return parse_logs(content, os.path.basename(file_path))
+    except Exception as e:
+        print(f"Error parsing log file {file_path}: {e}")
+        return []
