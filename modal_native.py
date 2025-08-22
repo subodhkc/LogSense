@@ -74,6 +74,7 @@ def native_app():
         .status-success { background: #d4edda; color: #155724; }
         .status-error { background: #f8d7da; color: #721c24; }
         .status-warning { background: #fff3cd; color: #856404; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -174,36 +175,6 @@ def native_app():
             </div>
         </div>
 
-        <button type="button" class="collapsible">Analysis Engine Selection</button>
-        <div class="content">
-            <div class="form-section">
-                <h4>Select Analysis Engines</h4>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="pythonEngine" name="pythonEngine" checked>
-                            Python Analysis Engine (Rule-based parsing)
-                        </label>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="localLLM" name="localLLM" checked>
-                            Local LLM (In-house Phi-2 Model)
-                        </label>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="cloudAI" name="cloudAI">
-                            Cloud AI (OpenAI GPT Fallback)
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <button type="button" class="collapsible">Additional Information (Optional)</button>
         <div class="content">
@@ -262,6 +233,32 @@ def native_app():
                 </div>
             </div>
             <div class="file-info" id="fileInfo" style="display: none;"></div>
+            
+            <!-- Analysis Engine Selection -->
+            <div id="engineSelection" style="display: none; margin: 20px 0;">
+                <h4>Select Analysis Engines</h4>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="pythonEngine" name="pythonEngine" checked>
+                            <strong>Python Analysis Engine</strong> - Rule-based parsing and event extraction
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="localLLM" name="localLLM" checked>
+                            <strong>Local LLM</strong> - In-house Phi-2 Model for AI analysis
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="cloudAI" name="cloudAI">
+                            <strong>Cloud AI</strong> - OpenAI GPT Fallback (if local fails)
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button type="button" class="btn" id="backToStep1" style="background: #6c757d;">← Back</button>
                 <button type="button" class="btn" id="analyzeBtn" style="display: none;">Analyze Log File</button>
@@ -346,10 +343,10 @@ def native_app():
                 buildNumber: document.getElementById('buildNumber').value,
                 buildChanges: document.getElementById('buildChanges').value,
                 previousVersion: document.getElementById('previousVersion').value,
-                // Analysis engine selections
-                pythonEngine: document.getElementById('pythonEngine').checked,
-                localLLM: document.getElementById('localLLM').checked,
-                cloudAI: document.getElementById('cloudAI').checked,
+                // Analysis engine selections (will be set later in upload step)
+                pythonEngine: true,
+                localLLM: true,
+                cloudAI: false,
                 // Additional info
                 hwModel: document.getElementById('hwModel').value,
                 osBuild: document.getElementById('osBuild').value,
@@ -416,20 +413,53 @@ def native_app():
             const dt = e.dataTransfer;
             const files = dt.files;
             document.getElementById('fileInput').files = files;
+            handleFileSelection(files[0]);
         }
         
-        // File upload handling
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // File input change handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+        
+        // Handle file selection and show file info
+        function handleFileSelection(file) {
+            const fileInfo = document.getElementById('fileInfo');
+            const engineSelection = document.getElementById('engineSelection');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            // Show file information
+            fileInfo.innerHTML = `
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; border-left: 4px solid #007bff;">
+                    <h4 style="margin: 0 0 10px 0; color: #007bff;">File Selected</h4>
+                    <p style="margin: 5px 0;"><strong>Name:</strong> ${file.name}</p>
+                    <p style="margin: 5px 0;"><strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p style="margin: 5px 0;"><strong>Type:</strong> ${file.type || 'Unknown'}</p>
+                </div>
+            `;
+            fileInfo.style.display = 'block';
+            engineSelection.style.display = 'block';
+            analyzeBtn.style.display = 'inline-block';
+        }
+        
+        // Analyze button handler
+        document.getElementById('analyzeBtn').addEventListener('click', async function() {
             const fileInput = document.getElementById('fileInput');
-            const results = document.getElementById('results');
-            const resultsContent = document.getElementById('resultsContent');
-            const metricsCards = document.getElementById('metricsCards');
+            const resultsSection = document.getElementById('resultsSection');
+            const analysisResults = document.getElementById('analysisResults');
             
             if (!fileInput.files[0]) { alert('Please select a file'); return; }
             
-            results.style.display = 'block';
-            resultsContent.innerHTML = '<div>Analyzing log file with Phi-2 LLM...</div>';
+            // Update engine selections in user context
+            window.userContext.pythonEngine = document.getElementById('pythonEngine').checked;
+            window.userContext.localLLM = document.getElementById('localLLM').checked;
+            window.userContext.cloudAI = document.getElementById('cloudAI').checked;
+            
+            // Show results section and hide upload section
+            document.getElementById('uploadSection').style.display = 'none';
+            resultsSection.style.display = 'block';
+            analysisResults.innerHTML = '<div style="padding: 20px; text-align: center;"><div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div><p>Analyzing log file with AI engines...</p></div>';
             
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
