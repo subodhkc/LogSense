@@ -1,6 +1,7 @@
 # serve_streamlit.py
 import shlex, subprocess
 from pathlib import Path
+import os, time
 import modal
 
 APP_ENTRY_REMOTE = "/root/app/skc_log_analyzer.py"
@@ -12,6 +13,12 @@ image = (
     .pip_install_from_requirements("requirements.txt")
     .add_local_dir(".", remote_path="/root/app")
 )
+
+# Optional cache-buster to force a rebuild ONLY when explicitly requested.
+# Set MODAL_FORCE_REBUILD=1 in your environment before running serve/deploy.
+if os.getenv("MODAL_FORCE_REBUILD") == "1":
+    # Add a no-op layer with a timestamp to invalidate cache economically
+    image = image.run_commands(f"bash -lc 'echo BUILD_TS={int(time.time())}'")
 
 app = modal.App(name="logsense-streamlit", image=image)
 
