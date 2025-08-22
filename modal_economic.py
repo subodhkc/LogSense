@@ -42,7 +42,6 @@ image = (
     min_containers=0,  # Don't keep containers warm
     timeout=1800, # 30 min timeout
 )
-@modal.concurrent(max_inputs=100)
 @modal.web_server(8000)
 def web():
     import subprocess
