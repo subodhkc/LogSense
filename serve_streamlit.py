@@ -37,7 +37,7 @@ def run():
     
     # Use subprocess.run() - blocks until Streamlit exits
     subprocess.run([
-        "streamlit", "run", "skc_log_analyzer_working.py",
+        "streamlit", "run", "skc_log_analyzer_fixed.py",
         "--server.port", str(PORT),
         "--server.address", "0.0.0.0",
         "--server.headless", "true",
