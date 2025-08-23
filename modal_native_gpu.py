@@ -79,8 +79,11 @@ def economical_app():
             
             # Import analysis module (lazy loading)
             try:
-                from analysis import parse_log_file
-                events = parse_log_file(temp_path)
+                from analysis import parse_logs
+                # Read file content and parse
+                with open(temp_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                events = parse_logs(content, file.filename)
                 
                 # Apply redaction if configured (no special characters)
                 try:
