@@ -96,7 +96,7 @@ def load_advanced_modules():
 # Streamlit app starts immediately - no heavy imports
 st.set_page_config(
     page_title="LogSense - AI Log Analysis",
-    page_icon="🔍",
+    page_icon="[SEARCH]",
     layout="wide"
 )
 
@@ -110,10 +110,10 @@ startup_duration = (datetime.now() - st.session_state.startup_time).total_second
 if load_ui_components():
     render_header()
 else:
-    st.title("🔍 LogSense - AI Log Analysis")
+    st.title("[SEARCH] LogSense - AI Log Analysis")
     st.write("**Enterprise-grade log analysis with AI-powered insights**")
 
-st.success(f"✅ App loaded in {startup_duration:.2f} seconds")
+st.success(f"[OK] App loaded in {startup_duration:.2f} seconds")
 
 # File upload
 uploaded_file = st.file_uploader("Upload log file", type=['txt', 'log', 'zip'])
@@ -125,7 +125,7 @@ if uploaded_file:
         analysis_loaded = load_analysis_modules()
     
     if analysis_loaded:
-        st.success("✅ Analysis modules loaded successfully")
+        st.success("[OK] Analysis modules loaded successfully")
         
         # Basic file info
         st.write(f"**File**: {uploaded_file.name}")
@@ -135,28 +135,28 @@ if uploaded_file:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("🔍 Basic Analysis"):
+            if st.button("[SEARCH] Basic Analysis"):
                 with st.spinner("Analyzing..."):
                     # Use loaded analysis module
                     try:
                         result = analysis.analyze_logs(uploaded_file.getvalue())
-                        st.success("✅ Basic analysis complete!")
+                        st.success("[OK] Basic analysis complete!")
                         st.json(result)
                     except Exception as e:
                         st.error(f"Analysis failed: {e}")
         
         with col2:
-            if st.button("🤖 AI Analysis"):
+            if st.button("[U+1F916] AI Analysis"):
                 with st.spinner("Running AI analysis..."):
                     try:
                         result = ai_rca.analyze_with_ai(uploaded_file.getvalue())
-                        st.success("✅ AI analysis complete!")
+                        st.success("[OK] AI analysis complete!")
                         st.json(result)
                     except Exception as e:
                         st.error(f"AI analysis failed: {e}")
         
         with col3:
-            if st.button("📊 Generate Report"):
+            if st.button("[U+1F4CA] Generate Report"):
                 with st.spinner("Generating report..."):
                     # Load advanced modules for report generation
                     modules = load_advanced_modules()
@@ -164,7 +164,7 @@ if uploaded_file:
                         try:
                             pdf_data = modules[1](uploaded_file.getvalue())
                             st.download_button(
-                                "📄 Download Report",
+                                "[U+1F4C4] Download Report",
                                 pdf_data,
                                 file_name=f"analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                                 mime="application/pdf"
@@ -188,7 +188,7 @@ else:
     if load_ui_components():
         render_welcome_screen()
     else:
-        st.info("💡 Upload a log file to start analysis")
+        st.info("[U+1F4A1] Upload a log file to start analysis")
         st.markdown("""
         **Supported formats:**
         - Text files (.txt, .log)
@@ -201,4 +201,4 @@ else:
         - Interactive reports
         """)
 
-st.info("🚀 All functionality preserved with lazy loading for fast startup")
+st.info("[U+1F680] All functionality preserved with lazy loading for fast startup")

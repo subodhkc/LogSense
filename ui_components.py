@@ -9,7 +9,7 @@ def render_header():
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col1:
-        st.markdown("### 🔍 LogSense")
+        st.markdown("### [SEARCH] LogSense")
     
     with col2:
         st.markdown("""
@@ -56,7 +56,7 @@ def render_progress_indicator(current_step: int, total_steps: int = 5):
                 unsafe_allow_html=True,
             )
 
-def render_info_card(title: str, content: str, icon: str = "ℹ️", color: str = "#e3f2fd"):
+def render_info_card(title: str, content: str, icon: str = "[U+2139][U+FE0F]", color: str = "#e3f2fd"):
     """Render information card with professional styling."""
     st.markdown(f"""
     <div style='

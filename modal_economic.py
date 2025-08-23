@@ -1,4 +1,4 @@
-# modal_economic.py — known-good Streamlit launcher for Modal
+# modal_economic.py - known-good Streamlit launcher for Modal
 import os, shlex, subprocess, threading
 import modal
 from modal import FilePatternMatcher

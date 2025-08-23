@@ -9,9 +9,9 @@ def mask_dynamic_fields(lines):
     Masks dynamic values in log lines that should not affect diff comparison.
 
     Fields commonly masked:
-    - Timestamps (e.g., 2025-07-27 14:22:01 → [TIMESTAMP])
-    - GUIDs (e.g., 123e4567-e89b-12d3-a456-426614174000 → [GUID])
-    - Absolute Windows paths (e.g., C:\\Program Files\\App → [PATH])
+    - Timestamps (e.g., 2025-07-27 14:22:01 -> [TIMESTAMP])
+    - GUIDs (e.g., 123e4567-e89b-12d3-a456-426614174000 -> [GUID])
+    - Absolute Windows paths (e.g., C:\\Program Files\\App -> [PATH])
 
     Args:
         lines (List[str]): List of log lines to normalize.

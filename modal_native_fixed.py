@@ -145,10 +145,10 @@ def native_app():
                     <h3>Generate Reports</h3>
                     <div class="info">
                         <strong>Report Contents:</strong><br>
-                        • System info and metadata<br>
-                        • Errors, timeline, and validations<br>
-                        • RCA summary (optional AI)<br>
-                        • Charts and insights
+                        - System info and metadata<br>
+                        - Errors, timeline, and validations<br>
+                        - RCA summary (optional AI)<br>
+                        - Charts and insights
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
                         <button type="button" class="btn" id="standardReport" style="background: #6c757d;">Standard Report</button>

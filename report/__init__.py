@@ -58,7 +58,7 @@ def _bullets(c: canvas.Canvas, x: float, y: float, items: List[str], width: floa
     c.setFont("Helvetica", 10)
     c.setFillColor(THEME["text"]) 
     for it in items[:max_items]:
-        bullet = "• "
+        bullet = "- "
         lines = simpleSplit(str(it), "Helvetica", 10, width - x - 6)
         if not lines:
             continue
@@ -346,7 +346,7 @@ def generate_pdf(
         pass_count = int(summ.get("pass_count", 0) or 0)
         first_failure_phase = summ.get("first_failure_phase")
 
-        y = _section_header(c, x, y, width, f"Validation Results — {plan_name}")
+        y = _section_header(c, x, y, width, f"Validation Results - {plan_name}")
         verdict = "pass" if fail_count == 0 else "fail"
         reason_bits = []
         if fail_count:
@@ -367,7 +367,7 @@ def generate_pdf(
             status = s.get("Status")
             action = (s.get("Step Action") or "").strip()
             phase = s.get("phase")
-            label = f"Step {step_no}: {status} — {action}"
+            label = f"Step {step_no}: {status} - {action}"
             if phase:
                 label += f" [Phase: {phase}]"
             step_lines.append(label)
@@ -433,7 +433,7 @@ def generate_pdf(
                 desc = chk.get("desc") or chk.get("id") or "Check"
                 hits = chk.get("hits", 0)
                 status = "Evidence found" if hits > 0 else "No evidence"
-                lines.append(f"[{sev}] {desc} — {status} (hits: {hits})")
+                lines.append(f"[{sev}] {desc} - {status} (hits: {hits})")
             y = _bullets(c, x + 8, y, lines, width)
             y -= 4
             if y < MARGINS["bottom"] + 48:
@@ -557,4 +557,3 @@ def generate_pdf(
     c.save()
     buf.seek(0)
     return buf.read()
-

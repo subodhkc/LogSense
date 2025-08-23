@@ -44,11 +44,11 @@ def get_ui_components():
 # Streamlit app starts immediately - no heavy imports
 st.set_page_config(
     page_title="LogSense - AI Log Analysis",
-    page_icon="🔍",
+    page_icon="[SEARCH]",
     layout="wide"
 )
 
-st.title("🔍 LogSense - AI Log Analysis")
+st.title("[SEARCH] LogSense - AI Log Analysis")
 st.write("**Fast startup version with lazy loading**")
 
 # Show startup time
@@ -56,7 +56,7 @@ if 'startup_time' not in st.session_state:
     st.session_state.startup_time = datetime.now()
     
 startup_duration = (datetime.now() - st.session_state.startup_time).total_seconds()
-st.success(f"✅ App loaded in {startup_duration:.2f} seconds")
+st.success(f"[OK] App loaded in {startup_duration:.2f} seconds")
 
 # File upload (only load pandas when needed)
 uploaded_file = st.file_uploader("Upload log file", type=['txt', 'log', 'zip'])
@@ -66,7 +66,7 @@ if uploaded_file:
         # NOW load heavy imports
         pd, zipfile, io, BytesIO, load_dotenv = get_heavy_imports()
         
-    st.success("✅ Heavy modules loaded - ready for analysis")
+    st.success("[OK] Heavy modules loaded - ready for analysis")
     
     # Basic file info without heavy processing
     st.write(f"File: {uploaded_file.name}")
@@ -77,7 +77,7 @@ if uploaded_file:
             # Load analysis modules only when actually needed
             analysis, redaction, test_plan, charts, recommendations, ai_rca, report = get_analysis_modules()
             
-        st.success("✅ Analysis complete!")
+        st.success("[OK] Analysis complete!")
         st.write("Analysis modules loaded successfully")
 
-st.info("💡 This version loads instantly by deferring heavy imports until actually needed")
+st.info("[U+1F4A1] This version loads instantly by deferring heavy imports until actually needed")

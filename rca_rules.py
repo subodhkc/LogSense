@@ -36,7 +36,7 @@ def detect_network_failure(events: List) -> str:
         or "network unreachable" in ev.message.lower()
         for ev in events
     ):
-        return "Network failure detected — logs indicate timeouts or server connectivity issues."
+        return "Network failure detected - logs indicate timeouts or server connectivity issues."
     return ""
 
 def detect_corrupt_media(events: List) -> str:
@@ -58,7 +58,7 @@ def detect_permission_issue(events: List) -> str:
         or "elevation required" in ev.message.lower()
         for ev in events
     ):
-        return "Permission issue detected — process may require administrative access."
+        return "Permission issue detected - process may require administrative access."
     return ""
 
 def detect_unsupported_hardware(events: List) -> str:

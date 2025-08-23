@@ -1,38 +1,38 @@
 ===============================
-🔧 LOG ANALYZER SETUP GUIDE
+[U+1F527] LOG ANALYZER SETUP GUIDE
 ===============================
 
 This guide will help you set up and run the SKC Log Analyzer on your local Windows machine.
 
 --------------------------------
-✅ STEP 1: INSTALL PREREQUISITES
+[OK] STEP 1: INSTALL PREREQUISITES
 --------------------------------
 
-📥 1.1 Install Git in your Pc(if not already installed)
+[U+1F4E5] 1.1 Install Git in your Pc(if not already installed)
 --------------------------------------------
 Git is required to clone the project from GitHub.
 
-➡ Download link:
+[U+27A1] Download link:
 https://git-scm.com/download/win
 
 After installing, open CMD and type:
     git --version
 You should see a version number like `git version 2.43.0`
 
-📥 1.2 Install Python 3.8 or newer in your Pc (if not installed)
+[U+1F4E5] 1.2 Install Python 3.8 or newer in your Pc (if not installed)
 ------------------------------------------------------
-➡ Download link:
+[U+27A1] Download link:
 https://www.python.org/downloads/windows/
 
 IMPORTANT:
-✔ During installation, make sure to check: "Add Python to PATH"
+[U+2714] During installation, make sure to check: "Add Python to PATH"
 
 After installing, open CMD and type:
     python --version
 You should see something like: `Python 3.10.9`
 
 -------------------------------------------------
-✅ STEP 2: CLONE THE REPO FROM GITHUB TO YOUR PC
+[OK] STEP 2: CLONE THE REPO FROM GITHUB TO YOUR PC
 -------------------------------------------------
 
 1. Open Command Prompt (CMD) in your pc
@@ -49,7 +49,7 @@ You should see something like: `Python 3.10.9`
     cd subodhkc-log-analyzer
 
 ------------------------------------------------
-✅ STEP 3: SET UP A PYTHON VIRTUAL ENVIRONMENT
+[OK] STEP 3: SET UP A PYTHON VIRTUAL ENVIRONMENT
 ------------------------------------------------
 
 This keeps your dependencies clean and isolated.
@@ -62,7 +62,7 @@ Run these commands in the project folder:
 After this, your prompt should change to show `(venv)`
 
 ---------------------------------------
-✅ STEP 4: INSTALL REQUIRED DEPENDENCIES
+[OK] STEP 4: INSTALL REQUIRED DEPENDENCIES
 ---------------------------------------
 
 OPTION A: If there is a file named `requirements.txt`:
@@ -84,10 +84,10 @@ OPTION B: Manually install each package:
     pip install transformers
     pip install torch
 
-💡 NOTE: `difflib` is already included with Python — no need to install.
+[U+1F4A1] NOTE: `difflib` is already included with Python - no need to install.
 
 -------------------------------
-✅ STEP 5: RUN THE APPLICATION
+[OK] STEP 5: RUN THE APPLICATION
 -------------------------------
 
 1. Make sure your virtual environment is activated:
@@ -106,7 +106,7 @@ This will:
 If that doesn't happen automatically, open your browser and paste the URL above.
 
 -------------------------------
-✅ WHAT TO EXPECT
+[OK] WHAT TO EXPECT
 -------------------------------
 
 Once the app is running:
@@ -115,7 +115,7 @@ Once the app is running:
 - Generated PDF reports (if enabled) will be downloadable via buttons in the app.
 
 -------------------------------
-✅ TROUBLESHOOTING TIPS
+[OK] TROUBLESHOOTING TIPS
 -------------------------------
 
 - If a package fails to install, make sure pip is updated:
@@ -131,6 +131,6 @@ Once the app is running:
     Press `CTRL + C` in the terminal
 
 ===============================
-🎉 SETUP COMPLETE!
+[U+1F389] SETUP COMPLETE!
 ===============================
 You are now ready to use the SKC Log Analyzer on your machine.

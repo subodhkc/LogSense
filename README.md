@@ -1,19 +1,19 @@
-# LogSense — Enterprise Log Analysis & RCA
+# LogSense - Enterprise Log Analysis & RCA
 
-LogSense is a professional, modular log analysis application built with Python and Streamlit. It helps TPMs, QA engineers, and support teams triage provisioning/installer logs (BIOS, SoftPaq, MSI, imaging, agents) and produce concise, defensible root‑cause analysis (RCA). AI assistance is available via local LLM or cloud.
+LogSense is a professional, modular log analysis application built with Python and Streamlit. It helps TPMs, QA engineers, and support teams triage provisioning/installer logs (BIOS, SoftPaq, MSI, imaging, agents) and produce concise, defensible root[U+2011]cause analysis (RCA). AI assistance is available via local LLM or cloud.
 
 
 
-## 🔍 Key Features
+## [SEARCH] Key Features
 - Secure log ingestion (ZIP and single-file) with robust parsing
-- Structured pre‑AI RCA: error detection, correlations, and rule‑based recommendations
+- Structured pre[U+2011]AI RCA: error detection, correlations, and rule[U+2011]based recommendations
 - Interactive timeline, test plan validation, and focused log filtering
 - Advanced analytics: clustering, anomaly detection (SVM), decision trees
 - PII redaction engine with configurable patterns
-- Professional PDF reporting with corporate SaaS design and executive one‑pager
+- Professional PDF reporting with corporate SaaS design and executive one[U+2011]pager
 - Optional AI analysis: local (offline) model or OpenAI fallback
 
-## 🧰 Setup
+## [U+1F9F0] Setup
 
 ### 1. Clone and Setup
 ```bash
@@ -27,40 +27,40 @@ streamlit run skc_log_analyzer.py
 
 ### 3. Folder Structure (condensed)
 ```
-├── skc_log_analyzer.py
-├── analysis.py
-├── redaction.py
-├── test_plan.py
-├── recommendations.py
-├── ai_rca.py                # Hybrid AI RCA (offline Phi‑2 + OpenAI fallback)
-├── report/                  # PDF report package (generate_pdf, pdf_builder)
-├── setup.py
-├── clustering_model.py
-├── decision_tree_model.py
-├── anomaly_svm.py
-├── utils.py
-├── requirements.txt
-├── plans/
-│   ├── dash_test_plan.json
-│   └── softpaq_test_plan.json
-├── config/
-│   ├── redact.json
-│   └── model.yaml   # Phi‑2 config (model, generation params)
+[U+251C][U+2500][U+2500] skc_log_analyzer.py
+[U+251C][U+2500][U+2500] analysis.py
+[U+251C][U+2500][U+2500] redaction.py
+[U+251C][U+2500][U+2500] test_plan.py
+[U+251C][U+2500][U+2500] recommendations.py
+[U+251C][U+2500][U+2500] ai_rca.py                # Hybrid AI RCA (offline Phi[U+2011]2 + OpenAI fallback)
+[U+251C][U+2500][U+2500] report/                  # PDF report package (generate_pdf, pdf_builder)
+[U+251C][U+2500][U+2500] setup.py
+[U+251C][U+2500][U+2500] clustering_model.py
+[U+251C][U+2500][U+2500] decision_tree_model.py
+[U+251C][U+2500][U+2500] anomaly_svm.py
+[U+251C][U+2500][U+2500] utils.py
+[U+251C][U+2500][U+2500] requirements.txt
+[U+251C][U+2500][U+2500] plans/
+[U+2502]   [U+251C][U+2500][U+2500] dash_test_plan.json
+[U+2502]   [U+2514][U+2500][U+2500] softpaq_test_plan.json
+[U+251C][U+2500][U+2500] config/
+[U+2502]   [U+251C][U+2500][U+2500] redact.json
+[U+2502]   [U+2514][U+2500][U+2500] model.yaml   # Phi[U+2011]2 config (model, generation params)
 ```
 
 
 
-## 🔐 Security
+## [U+1F510] Security
 - Only redacted logs are sent to any external API (if enabled)
 - All parsing, analytics, and local LLM inference run locally
 
-## 📦 Deployment
+## [U+1F4E6] Deployment
 - Local: `streamlit run skc_log_analyzer.py`
 - Docker (CPU): build with the provided `Dockerfile`
 
-## 🧠 LLM Support (Phi‑2 Migration)
-- Default offline model: Microsoft Phi‑2
-- Optional LoRA adapters auto‑load from `adapters/phi2-lora`
+## [U+1F9E0] LLM Support (Phi[U+2011]2 Migration)
+- Default offline model: Microsoft Phi[U+2011]2
+- Optional LoRA adapters auto[U+2011]load from `adapters/phi2-lora`
 - OpenAI fallback supported if `OPENAI_API_KEY` is set
 
 Env/config overrides (also see `config/model.yaml`):
@@ -76,11 +76,11 @@ Env/config overrides (also see `config/model.yaml`):
 
 ## UI Engine Toggles
 - Use Python Engines (rules, validations, summaries)
-- Use Local LLM (Phi‑2)
+- Use Local LLM (Phi[U+2011]2)
 - Use Cloud AI (OpenAI)
 
 These appear in the sidebar and control what is executed and rendered.
 
 ## Credits
 Built by Subodh Kc
-Powered by Python, Streamlit, Transformers, and open‑source intelligence
+Powered by Python, Streamlit, Transformers, and open[U+2011]source intelligence

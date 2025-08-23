@@ -65,7 +65,7 @@ load_dotenv()
 # App metadata
 st.set_page_config(
     page_title="LogSense - Enterprise Log Analysis",
-    page_icon="🧭",
+    page_icon="[U+1F9ED]",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -101,7 +101,7 @@ render_header()
 render_progress_indicator(st.session_state["current_step"])
 
 # User Information Section
-with st.expander("👤 User & Test Information", expanded=True):
+with st.expander("[U+1F464] User & Test Information", expanded=True):
     col1, col2 = st.columns(2)
     with col1:
         user_name = st.text_input("Your Name", placeholder="Enter your full name", help="This will appear in your final report.")
@@ -111,7 +111,7 @@ with st.expander("👤 User & Test Information", expanded=True):
         test_environment = st.selectbox("Test Environment", ["Production", "Staging", "Development", "QA", "Pre-production", "Other"], help="Environment where testing occurred")
 
 # Issue Description Section
-with st.expander("🔍 Issue Description & Context", expanded=True):
+with st.expander("[SEARCH] Issue Description & Context", expanded=True):
     issue_description = st.text_area(
         "Describe the Issue", 
         placeholder="What problem are you experiencing? Be specific about symptoms, error messages, and impact.",
@@ -128,7 +128,7 @@ with st.expander("🔍 Issue Description & Context", expanded=True):
         previous_version = st.text_input("Previous Working Version", placeholder="Last known good version")
 
 # File Upload Section
-with st.expander("📁 Log File Upload", expanded=True):
+with st.expander("[U+1F4C1] Log File Upload", expanded=True):
     uploaded_file = st.file_uploader(
         "Upload Log Files (ZIP recommended)", 
         type=["zip", "txt", "log"], 
@@ -151,7 +151,7 @@ with st.expander("📁 Log File Upload", expanded=True):
                     render_info_card(
                         "Archive Contents", 
                         f"Found {len(log_files)} log files in ZIP archive ({len(zip_contents)} total files)",
-                        "📁"
+                        "[U+1F4C1]"
                     )
                     
                     for file_name in log_files:
@@ -205,7 +205,7 @@ if redacted_events:
 
     # Test Plan Section
     if use_python_eng:
-        with st.expander("📋 Test Plan Validation", expanded=False):
+        with st.expander("[U+1F4CB] Test Plan Validation", expanded=False):
             available_plans = setup.get_available_test_plans()
             if available_plans:
                 # Friendly mapping similar to primary UI
@@ -219,11 +219,11 @@ if redacted_events:
                     else:
                         plan_labels[fn] = fn
 
-                display_options = ["None"] + [f"{plan_labels[fn]} — {fn}" for fn in available_plans]
+                display_options = ["None"] + [f"{plan_labels[fn]} - {fn}" for fn in available_plans]
                 sel = st.selectbox("Select Test Plan", display_options)
                 if sel != "None":
                     try:
-                        selected_plan_file = sel.split(" — ", 1)[1]
+                        selected_plan_file = sel.split(" - ", 1)[1]
                     except Exception:
                         selected_plan_file = sel
                     plan_data = setup.get_test_plan(selected_plan_file)
@@ -253,7 +253,7 @@ if redacted_events:
                 st.info("No test plans available in the plans/ directory.")
 
     # Timeline and Issues
-    st.subheader("📊 Timeline & Issues Analysis")
+    st.subheader("[U+1F4CA] Timeline & Issues Analysis")
     
     # Timeline
     timeline_events = sorted(redacted_events, key=lambda x: x.timestamp)[:50]  # Show first 50
@@ -276,7 +276,7 @@ if redacted_events:
         } for ev in issues])
         render_data_table(issues_df, "Errors and Warnings")
     else:
-        render_info_card("No Issues Found", "No warnings or errors detected in the logs.", "✅", "#d4edda")
+        render_info_card("No Issues Found", "No warnings or errors detected in the logs.", "[OK]", "#d4edda")
 
     # Tabs for advanced analysis
     tab_templates, tab_ml, tab_corr, tab_reports = st.tabs(["Templates", "ML Insights", "Correlations", "Reports"])
@@ -294,11 +294,11 @@ if redacted_events:
                 render_data_table(tmpl_df, "Template Analysis")
 
     with tab_ml:
-        st.subheader("🤖 Machine Learning Insights")
+        st.subheader("[U+1F916] Machine Learning Insights")
         render_info_card(
             "ML Analysis",
             "Use machine learning to uncover hidden patterns: clustering, anomaly detection, and severity prediction.",
-            "🔬"
+            "[U+1F52C]"
         )
 
         col1, col2, col3 = st.columns(3)
@@ -363,12 +363,12 @@ if redacted_events:
 
     with tab_reports:
         st.session_state["current_step"] = 4
-        st.subheader("📄 Generate Reports")
+        st.subheader("[U+1F4C4] Generate Reports")
         
         render_info_card(
             "Report Contents",
-            "• System info and metadata\n• Errors, timeline, and validations\n• RCA summary (optional AI)\n• Charts and insights",
-            "📋",
+            "- System info and metadata\n- Errors, timeline, and validations\n- RCA summary (optional AI)\n- Charts and insights",
+            "[U+1F4CB]",
             "#e3f2fd"
         )
 
@@ -378,21 +378,21 @@ if redacted_events:
         if use_python_eng:
             report_actions.append({
                 "key": "no_ai",
-                "label": "📄 Standard Report",
+                "label": "[U+1F4C4] Standard Report",
                 "type": "secondary"
             })
         
         if use_local_llm:
             report_actions.append({
                 "key": "local_ai",
-                "label": "🤖 Local AI Report",
+                "label": "[U+1F916] Local AI Report",
                 "type": "primary"
             })
         
         if use_cloud_ai:
             report_actions.append({
                 "key": "cloud_ai",
-                "label": "☁️ Cloud AI Report",
+                "label": "[U+2601][U+FE0F] Cloud AI Report",
                 "type": "primary"
             })
 
@@ -417,7 +417,7 @@ if redacted_events:
 
         # One-Pager PDF
         st.markdown("---")
-        st.subheader("📋 Executive Summary (One-Pager)")
+        st.subheader("[U+1F4CB] Executive Summary (One-Pager)")
         if st.button("Generate Executive Summary", use_container_width=True):
             with st.spinner("Building executive summary..."):
                 try:

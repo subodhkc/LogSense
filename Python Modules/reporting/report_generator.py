@@ -27,7 +27,7 @@ def generate_text_report(rca_results, anomaly_summary, unmatched_count):
     for issue in rca_results:
         report.append(f"- Line {issue['line']} | Pattern: {issue['pattern']} | Cause: {issue['rca']}")
         if issue.get("exception_summary"):
-            report.append(f"  → {issue['exception_summary']}")
+            report.append(f"  -> {issue['exception_summary']}")
 
     # Anomaly Summary
     report.append("\nAnomaly Summary:")

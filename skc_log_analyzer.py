@@ -294,12 +294,12 @@ if redacted_events:
                     else:
                         plan_labels[fn] = fn
 
-                display_options = ["None"] + [f"{plan_labels[fn]} — {fn}" for fn in available_plans]
+                display_options = ["None"] + [f"{plan_labels[fn]} - {fn}" for fn in available_plans]
                 sel = st.selectbox("Select Test Plan", display_options)
                 if sel != "None":
                     # Extract filename from selection
                     try:
-                        selected_plan_file = sel.split(" — ", 1)[1]
+                        selected_plan_file = sel.split(" - ", 1)[1]
                     except Exception:
                         selected_plan_file = sel
                     plan_data = setup.get_test_plan(selected_plan_file)
@@ -443,7 +443,7 @@ if redacted_events:
         if st.checkbox(
             "Show Correlations (Sequences & Sessions)",
             value=False,
-            help="Finds WARN→ERROR sequences within a time window and pairs 'start'/'ended' actions into sessions. Use sequence hits to locate causal chains, and sessions to measure operation durations."
+            help="Finds WARN->ERROR sequences within a time window and pairs 'start'/'ended' actions into sessions. Use sequence hits to locate causal chains, and sessions to measure operation durations."
         ):
             st.subheader("Correlations")
             render_info_card(
@@ -493,7 +493,7 @@ if redacted_events:
         
         render_info_card(
             "Report Contents",
-            "• System info and metadata\n• Errors, timeline, and validations\n• RCA summary (optional AI)\n• Charts and insights",
+            "- System info and metadata\n- Errors, timeline, and validations\n- RCA summary (optional AI)\n- Charts and insights",
             "",
             "#e3f2fd"
         )
@@ -594,7 +594,7 @@ if redacted_events:
                         corr = high_corr[0]
                         recs.append({
                             "severity": "WARNING",
-                            "message": f"Strong correlation detected: {corr['component1']} ↔ {corr['component2']} (score: {corr['correlation_score']:.2f})"
+                            "message": f"Strong correlation detected: {corr['component1']} [U+2194] {corr['component2']} (score: {corr['correlation_score']:.2f})"
                         })
 
                 # Entropy Analysis
@@ -743,10 +743,10 @@ if redacted_events:
                 with st.chat_message(role):
                     st.markdown(msg)
             # Chat input
-            prompt = st.chat_input("Ask a question about the findings, errors, or next steps…")
+            prompt = st.chat_input("Ask a question about the findings, errors, or next steps...")
             if prompt:
                 st.session_state[chat_key].append(("user", prompt))
-                with st.spinner("Thinking…" if active_mode == "local_ai" else "Consulting OpenAI…"):
+                with st.spinner("Thinking..." if active_mode == "local_ai" else "Consulting OpenAI..."):
                     # Create contextual chat prompt based on user question and report
                     ai_summary = st.session_state.get("ai_summary_local") if active_mode == "local_ai" else st.session_state.get("ai_summary_cloud")
                     

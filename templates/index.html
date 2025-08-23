@@ -116,7 +116,7 @@
                 <div class="expander" id="upload-expander">
                     <div class="expander-header" onclick="toggleExpander('upload')">
                         <span>Log File Upload</span>
-                        <span class="expander-arrow">▶</span>
+                        <span class="expander-arrow">v</span>
                     </div>
                     <div class="expander-content expanded" id="upload-content">
                         <div class="upload-area" onclick="document.getElementById('file-input').click()">
@@ -135,7 +135,7 @@
                 <div class="expander" id="user-info-expander">
                     <div class="expander-header" onclick="toggleExpander('user-info')">
                         <span>User & Test Information</span>
-                        <span class="expander-arrow">▶</span>
+                        <span class="expander-arrow">v</span>
                     </div>
                     <div class="expander-content expanded" id="user-info-content">
                         <form id="context-form">
@@ -173,7 +173,7 @@
                 <div class="expander" id="issue-desc-expander">
                     <div class="expander-header" onclick="toggleExpander('issue-desc')">
                         <span>Issue Description & Context</span>
-                        <span class="expander-arrow">▶</span>
+                        <span class="expander-arrow">v</span>
                     </div>
                     <div class="expander-content expanded" id="issue-desc-content">
                         <div class="form-group">
@@ -252,23 +252,28 @@
                     </div>
                     
                     <div class="tab-content" id="correlations-tab">
-                        <div class="checkbox-container">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="show-correlations">
-                                Show Correlations (Sequences & Sessions)
-                            </label>
+                        <h3>Event Correlations</h3>
+                        <div class="info-card">
+                            <h4>Correlation Analysis</h4>
+                            <p>Analyze relationships between events, identify causal chains, and detect patterns across different log sources.</p>
+                        </div>
+                        <div class="correlation-buttons">
+                            <button class="btn btn-primary" onclick="runCorrelationAnalysis('temporal')">Temporal Correlations</button>
+                            <button class="btn btn-primary" onclick="runCorrelationAnalysis('causal')">Causal Chain Analysis</button>
+                            <button class="btn btn-primary" onclick="runCorrelationAnalysis('cross-source')">Cross-Source Analysis</button>
                         </div>
                         <div id="correlations-content"></div>
+                        <div id="correlation-results"></div>
                     </div>
                     
                     <div class="tab-content" id="reports-tab">
                         <h3>Generate Reports</h3>
                         <div class="info-card">
                             <h4>Report Contents</h4>
-                            <p>• System info and metadata<br>
-                            • Errors, timeline, and validations<br>
-                            • RCA summary (optional AI)<br>
-                            • Charts and insights</p>
+                            <p>- System info and metadata<br>
+                            - Errors, timeline, and validations<br>
+                            - RCA summary (optional AI)<br>
+                            - Charts and insights</p>
                         </div>
                         
                         <div class="report-buttons">

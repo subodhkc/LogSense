@@ -15,21 +15,21 @@ st.write(f"Current directory: {os.getcwd()}")
 # Test basic imports
 try:
     import pandas as pd
-    st.success("✅ pandas imported successfully")
+    st.success("[OK] pandas imported successfully")
 except Exception as e:
-    st.error(f"❌ pandas import failed: {e}")
+    st.error(f"[X] pandas import failed: {e}")
 
 try:
     import numpy as np
-    st.success("✅ numpy imported successfully")
+    st.success("[OK] numpy imported successfully")
 except Exception as e:
-    st.error(f"❌ numpy import failed: {e}")
+    st.error(f"[X] numpy import failed: {e}")
 
 try:
     import matplotlib.pyplot as plt
-    st.success("✅ matplotlib imported successfully")
+    st.success("[OK] matplotlib imported successfully")
 except Exception as e:
-    st.error(f"❌ matplotlib import failed: {e}")
+    st.error(f"[X] matplotlib import failed: {e}")
 
 # Test file system access
 import os

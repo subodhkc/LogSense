@@ -26,7 +26,7 @@ def _kv(c: canvas.Canvas, x: float, y: float, label: str, value: str) -> float:
 def _bullets(c: canvas.Canvas, x: float, y: float, items: List[str], max_items: int = 6) -> float:
     c.setFont("Times-Roman", 10)
     for it in items[:max_items]:
-        c.drawString(x, y, f"• {str(it)[:100]}")
+        c.drawString(x, y, f"- {str(it)[:100]}")
         y -= 12
     return y
 
@@ -37,7 +37,7 @@ def build_pdf(report: Dict[str, Any], out_path: str, include_annexes: bool = Tru
     x, y = inch * 0.75, height - inch * 0.75
 
     # Header
-    y = _draw_header(c, "LogSense — One-Pager", report.get("meta", {}).get("build", "Unnamed Build"), x, y)
+    y = _draw_header(c, "LogSense - One-Pager", report.get("meta", {}).get("build", "Unnamed Build"), x, y)
 
     # Meta block
     m = report.get("meta", {})
@@ -78,7 +78,7 @@ def build_pdf(report: Dict[str, Any], out_path: str, include_annexes: bool = Tru
     # Annexes
     if include_annexes:
         x, y = inch * 0.75, height - inch * 0.75
-        c.setFont("Times-Bold", 14); c.drawString(x, y, "Annex — Evidence Packs"); y -= 18
+        c.setFont("Times-Bold", 14); c.drawString(x, y, "Annex - Evidence Packs"); y -= 18
         packs = report.get("evidence", [])[:250]
         c.setFont("Times-Roman", 10)
         for idx, ev in enumerate(packs, 1):
@@ -88,7 +88,7 @@ def build_pdf(report: Dict[str, Any], out_path: str, include_annexes: bool = Tru
             if y < inch * 0.5:
                 c.showPage()
                 x, y = inch * 0.75, height - inch * 0.75
-                c.setFont("Times-Bold", 14); c.drawString(x, y, "Annex — Evidence Packs (cont.)"); y -= 18
+                c.setFont("Times-Bold", 14); c.drawString(x, y, "Annex - Evidence Packs (cont.)"); y -= 18
 
     c.save()
     return out_path

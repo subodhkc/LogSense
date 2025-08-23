@@ -129,7 +129,7 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
             "1. **Issue Correlation**  \n"
             "How do the log events correlate with the user's reported issue? What patterns match their description?\n\n"
             "2. **Log Overview**  \n"
-            "Summarize the system operations observed in the logs — including install attempts, reboots, service changes, etc.\n\n"
+            "Summarize the system operations observed in the logs - including install attempts, reboots, service changes, etc.\n\n"
             "3. **Key Events (ERROR/CRITICAL)**  \n"
             "List the most critical errors and their potential impact.\n\n"
             f"=== LOG DATA ===\n{formatted_logs}\n\nAnalysis:"

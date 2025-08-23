@@ -48,6 +48,6 @@ def plot_event_frequency_by_hour(events):
     fig, ax = plt.subplots()
     ax.bar(labels, values)
     ax.set_title("Log Events by Hour of Day")
-    ax.set_xlabel("Hour (0–23)")
+    ax.set_xlabel("Hour (0-23)")
     ax.set_ylabel("Number of Events")
     return fig

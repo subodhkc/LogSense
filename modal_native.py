@@ -7,7 +7,7 @@ APP_NAME = "logsense-native-complete"
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .env({"PYTHONIOENCODING": "utf-8", "LC_ALL": "C.UTF-8", "LANG": "C.UTF-8"})
-    .pip_install_from_requirements("requirements-full.txt")
+    .pip_install_from_requirements("requirements-modal.txt")
     .pip_install("jinja2")  # Add Jinja2 for templates
     .add_local_dir(".", remote_path="/root/app")
 )
