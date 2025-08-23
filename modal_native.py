@@ -97,10 +97,15 @@ def native_app():
             # Analyze events
             analysis_result = analyze_events(events)
             
-            # Cache results
+            # Cache results globally and in session
             _analysis_cache['events'] = events
             _analysis_cache['analysis'] = analysis_result
             _analysis_cache['user_context'] = user_context
+            
+            # Also store in local session cache for redundancy
+            analysis_cache['events'] = events
+            analysis_cache['analysis'] = analysis_result
+            analysis_cache['user_context'] = user_context
             
             return JSONResponse({
                 "status": "success",
@@ -131,15 +136,15 @@ def native_app():
             
             print(f"[REPORT] Generating {report_type} report with engines: Local={use_local_llm}, Cloud={use_cloud_ai}, Python={use_python_engine}")
             
-            # Check if we have cached analysis results
-            if not _analysis_cache:
-                return JSONResponse({"error": "No analysis data available. Please upload and analyze a log file first."}, status_code=400)
-            
-            events = _analysis_cache.get('events', [])
-            user_context = _analysis_cache.get('user_context', {})
+            # Check if we have cached analysis results (try both caches)
+            events = _analysis_cache.get('events', []) or analysis_cache.get('events', [])
+            user_context = _analysis_cache.get('user_context', {}) or analysis_cache.get('user_context', {})
             
             if not events:
-                return JSONResponse({"error": "No events found in analysis cache."}, status_code=400)
+                return JSONResponse({
+                    "error": "No events found in analysis cache. Please upload and analyze a log file first.",
+                    "cache_status": f"Global cache: {len(_analysis_cache)} items, Session cache: {len(analysis_cache)} items"
+                }, status_code=400)
             
             # Perform AI analysis based on report type
             ai_analysis_result = None

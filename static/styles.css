@@ -53,16 +53,28 @@ body {
     font-weight: 600;
 }
 
+.checkbox-container {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e6e9ef;
+}
+
 .checkbox-label {
-    display: block;
-    margin-bottom: 0.75rem;
-    cursor: pointer;
-    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
     color: #262730;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
 }
 
 .checkbox-label input[type="checkbox"] {
-    margin-right: 0.5rem;
+    margin-right: 10px;
+    transform: scale(1.2);
+    accent-color: #ff4b4b;
 }
 
 .metric {
@@ -428,23 +440,24 @@ body {
 .info-card {
     background-color: #fafafa;
     border: 1px solid #e6e9ef;
-    border-radius: 4px;
-    padding: 1rem;
-    margin-bottom: 1rem;
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
     border-left: 4px solid #ff4b4b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .info-card h4 {
     color: #262730;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .info-card p {
     color: #808495;
     margin: 0;
-    line-height: 1.5;
+    line-height: 1.6;
     font-size: 0.875rem;
 }
 
@@ -519,8 +532,6 @@ body {
         flex-direction: column;
     }
 }
-
-
 
 .upload-icon {
     font-size: 3em;
@@ -759,6 +770,80 @@ body {
 /* Hide sections initially */
 .hidden { display: none; }
 
+/* Bottom section styling improvements */
+.report-buttons, .ml-buttons, .correlation-buttons {
+    display: flex;
+    gap: 12px;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.report-buttons .btn, .ml-buttons .btn, .correlation-buttons .btn {
+    min-width: 140px;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.btn-secondary {
+    background-color: #f8f9fa;
+    color: #495057;
+    border-color: #dee2e6;
+}
+
+.btn-secondary:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-primary:hover {
+    background-color: #e33e3e;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 75, 75, 0.3);
+}
+
+/* Results containers */
+#report-results, #ml-results, #correlation-results, #templates-content {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background-color: #fafafa;
+    border-radius: 6px;
+    border: 1px solid #e6e9ef;
+    min-height: 120px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+#report-results:empty::before {
+    content: "Report results will appear here...";
+}
+
+#ml-results:empty::before {
+    content: "ML analysis results will appear here...";
+}
+
+#correlation-results:empty::before {
+    content: "Correlation analysis results will appear here...";
+}
+
+/* Tab content spacing */
+.tab-content {
+    padding: 1.5rem 0;
+}
+
+.tab-content h3 {
+    margin-bottom: 1rem;
+    color: #262730;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
 /* Enhanced responsive design */
 @media (max-width: 768px) {
     .sidebar {
@@ -791,5 +876,15 @@ body {
     
     .header h1 {
         font-size: 2.5em;
+    }
+    
+    .report-buttons, .ml-buttons, .correlation-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .report-buttons .btn, .ml-buttons .btn, .correlation-buttons .btn {
+        min-width: auto;
+        width: 100%;
     }
 }
