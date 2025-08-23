@@ -24,7 +24,7 @@ function toggleExpander(header) {
     
     content.classList.toggle('expanded');
     arrow.classList.toggle('expanded');
-    arrow.textContent = content.classList.contains('expanded') ? '▼' : '▶';
+    arrow.textContent = content.classList.contains('expanded') ? 'v' : '>';
 }
 
 // Setup event listeners
@@ -379,7 +379,7 @@ function displayReportResults(result, reportType) {
     if (result.download_url) {
         reportHtml += `
             <div style="margin-top: 20px;">
-                <a href="${result.download_url}" class="btn btn-success" download>📄 Download Report</a>
+                <a href="${result.download_url}" class="btn btn-success" download>Download Report</a>
             </div>
         `;
     }

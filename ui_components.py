@@ -38,13 +38,13 @@ def render_progress_indicator(current_step: int, total_steps: int = 5):
     for i, (col, step) in enumerate(zip(cols, steps)):
         if i < current_step:
             color = "#28a745"  # Green for completed
-            icon = "✓"
+            icon = "DONE"
         elif i == current_step:
             color = "#1f77b4"  # Blue for current
-            icon = "●"
+            icon = "ACTIVE"
         else:
             color = "#dee2e6"  # Gray for pending
-            icon = "○"
+            icon = "PENDING"
 
         with col:
             st.markdown(

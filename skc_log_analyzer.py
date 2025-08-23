@@ -70,7 +70,7 @@ load_dotenv()
 # App metadata
 st.set_page_config(
     page_title="LogSense - Enterprise Log Analysis",
-    page_icon="🔍",
+    page_icon="LOG",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -703,7 +703,7 @@ if redacted_events:
         with col1:
             if "pdf_standard" in st.session_state:
                 st.download_button(
-                    "📄 Standard Report", 
+                    "Standard Report", 
                     data=st.session_state["pdf_standard"], 
                     file_name="LogSense_Report_Standard.pdf", 
                     mime="application/pdf",
@@ -713,7 +713,7 @@ if redacted_events:
         with col2:
             if "pdf_local_ai" in st.session_state:
                 st.download_button(
-                    "🤖 Local AI Report", 
+                    "Local AI Report", 
                     data=st.session_state["pdf_local_ai"], 
                     file_name="LogSense_Report_LocalAI.pdf", 
                     mime="application/pdf",
@@ -723,7 +723,7 @@ if redacted_events:
         with col3:
             if "pdf_cloud_ai" in st.session_state:
                 st.download_button(
-                    "☁️ Cloud AI Report", 
+                    "Cloud AI Report", 
                     data=st.session_state["pdf_cloud_ai"], 
                     file_name="LogSense_Report_CloudAI.pdf", 
                     mime="application/pdf",
