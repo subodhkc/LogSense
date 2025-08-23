@@ -1,482 +1,363 @@
-// Global state
-let currentStep = 0;
-let contextSubmitted = false;
-let analysisData = null;
+// JavaScript for LogSense Modal Native App
 
-// Initialize
+let currentStep = 0;
+let analysisResults = null;
+
+// Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('sessionId').textContent = 'LS-' + Date.now().toString(36).toUpperCase();
-    updateProgress(0);
-    setupEventListeners();
+    updateProgressSteps();
+    setupFileUpload();
+    setupExpanders();
+    setupTabs();
 });
 
-// Progress management
-function updateProgress(step) {
-    currentStep = step;
-    const progress = (step / 4) * 100;
-    document.getElementById('progressFill').style.width = progress + '%';
+// Update progress indicator
+function updateProgressSteps() {
+    const steps = document.querySelectorAll('.progress-step');
+    steps.forEach((step, index) => {
+        step.classList.remove('active', 'completed');
+        const icon = step.querySelector('.step-icon');
+        
+        if (index < currentStep) {
+            step.classList.add('completed');
+            icon.textContent = 'DONE';
+        } else if (index === currentStep) {
+            step.classList.add('active');
+            icon.textContent = 'ACTIVE';
+        } else {
+            icon.textContent = 'PENDING';
+        }
+    });
 }
 
-// Expandable sections
-function toggleExpander(header) {
-    const content = header.nextElementSibling;
-    const arrow = header.querySelector('.expander-arrow');
-    
-    content.classList.toggle('expanded');
-    arrow.classList.toggle('expanded');
-    arrow.textContent = content.classList.contains('expanded') ? 'v' : '>';
+// Setup expander functionality
+function setupExpanders() {
+    const expanders = document.querySelectorAll('.expander-header');
+    expanders.forEach(header => {
+        header.addEventListener('click', function() {
+            const expanderId = this.parentElement.id.replace('-expander', '');
+            toggleExpander(expanderId);
+        });
+    });
 }
 
-// Setup event listeners
-function setupEventListeners() {
-    // Context form submission
-    document.getElementById('contextForm').addEventListener('submit', handleContextSubmit);
+// Toggle expander
+function toggleExpander(expanderId) {
+    const content = document.getElementById(expanderId + '-content');
+    const arrow = document.querySelector(`#${expanderId}-expander .expander-arrow`);
     
-    // File input change
-    document.getElementById('fileInput').addEventListener('change', handleFileSelect);
-    
-    // Analyze button
-    document.getElementById('analyzeBtn').addEventListener('click', handleAnalyze);
-    
-    // Drag and drop
-    const uploadArea = document.getElementById('uploadArea');
-    uploadArea.addEventListener('dragover', handleDragOver);
-    uploadArea.addEventListener('dragleave', handleDragLeave);
-    uploadArea.addEventListener('drop', handleDrop);
-    
-    // Report buttons
-    document.getElementById('standardReport').addEventListener('click', () => generateReport('standard'));
-    document.getElementById('localAIReport').addEventListener('click', () => generateReport('local_ai'));
-    document.getElementById('cloudAIReport').addEventListener('click', () => generateReport('cloud_ai'));
+    if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        arrow.textContent = '▶';
+    } else {
+        content.classList.add('expanded');
+        arrow.textContent = '▼';
+    }
 }
 
-// Context form submission
-async function handleContextSubmit(e) {
-    e.preventDefault();
+// Setup tabs functionality
+function setupTabs() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabName = this.textContent.toLowerCase().replace(' ', '');
+            showTab(tabName);
+        });
+    });
+}
+
+// Show specific tab
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+    });
     
-    // Validate required fields
-    const userName = document.getElementById('userName').value;
-    const appName = document.getElementById('appName').value;
-    const issueDescription = document.getElementById('issueDescription').value;
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
     
-    if (!userName || !appName || !issueDescription) {
-        alert('Please fill in all required fields marked with *');
-        return;
+    // Show selected tab content
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) {
+        selectedTab.classList.add('active');
     }
     
-    // Collect all form data
-    const contextData = {
-        user_name: userName,
-        app_name: appName,
-        app_version: document.getElementById('appVersion').value,
-        test_environment: document.getElementById('testEnvironment').value,
-        issue_description: issueDescription,
-        deployment_method: document.getElementById('deploymentMethod').value,
-        build_number: document.getElementById('buildNumber').value,
-        build_changes: document.getElementById('buildChanges').value,
-        previous_version: document.getElementById('previousVersion').value,
-        hw_model: document.getElementById('hwModel').value,
-        os_build: document.getElementById('osBuild').value,
-        region: document.getElementById('region').value,
-        test_run_id: document.getElementById('testRunId').value,
-        network_constraints: document.getElementById('networkConstraints').value,
-        proxy_config: document.getElementById('proxyConfig').value,
-        device_sku: document.getElementById('deviceSku').value,
-        notes_private: document.getElementById('notesPrivate').value
-    };
+    // Add active class to selected button
+    const selectedButton = Array.from(tabButtons).find(button => 
+        button.textContent.toLowerCase().replace(' ', '') === tabName
+    );
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+}
+
+// Setup file upload functionality
+function setupFileUpload() {
+    const fileInput = document.getElementById('file-input');
+    const uploadArea = document.querySelector('.upload-area');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
+    }
     
-    try {
-        const response = await fetch('/submit_context', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(contextData)
+    if (uploadArea) {
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
         });
         
-        const result = await response.json();
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
         
-        if (result.status === 'success') {
-            contextSubmitted = true;
-            updateProgress(1);
-            document.getElementById('uploadSection').style.display = 'block';
-            
-            // Show success message
-            const successDiv = document.createElement('div');
-            successDiv.className = 'info info-success';
-            successDiv.innerHTML = '<strong>Context saved successfully!</strong> You can now upload your log files.';
-            document.getElementById('uploadSection').insertBefore(successDiv, document.getElementById('uploadSection').firstChild);
-            
-            // Scroll to upload section
-            document.getElementById('uploadSection').scrollIntoView({ behavior: 'smooth' });
-        } else {
-            alert('Failed to save context: ' + (result.error || 'Unknown error'));
-        }
-    } catch (error) {
-        alert('Failed to save context: ' + error.message);
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
     }
 }
 
-// File selection handling
-function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        document.getElementById('fileInfo').innerHTML = `
-            <div class="info info-success">
-                <strong>File selected:</strong> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-            </div>
-        `;
-        document.getElementById('fileInfo').style.display = 'block';
-        document.getElementById('analyzeBtn').style.display = 'block';
-        updateProgress(2);
-    }
-}
-
-// Drag and drop handlers
-function handleDragOver(e) {
-    e.preventDefault();
-    document.getElementById('uploadArea').classList.add('dragover');
-}
-
-function handleDragLeave(e) {
-    e.preventDefault();
-    document.getElementById('uploadArea').classList.remove('dragover');
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    document.getElementById('uploadArea').classList.remove('dragover');
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        document.getElementById('fileInput').files = files;
-        document.getElementById('fileInput').dispatchEvent(new Event('change'));
-    }
-}
-
-// Analyze button handler
-async function handleAnalyze() {
-    if (!contextSubmitted) {
-        alert('Please submit the context form first');
-        return;
-    }
-    
-    const fileInput = document.getElementById('fileInput');
+// Handle file selection
+function handleFileSelect() {
+    const fileInput = document.getElementById('file-input');
     const file = fileInput.files[0];
     
-    if (!file) {
-        alert('Please select a file first');
-        return;
+    if (file) {
+        showFileInfo(file);
+        uploadFile(file);
     }
+}
+
+// Show file information
+function showFileInfo(file) {
+    const fileInfo = document.getElementById('file-info');
+    const fileSize = (file.size / 1024 / 1024).toFixed(2);
     
-    const analyzeBtn = document.getElementById('analyzeBtn');
+    if (fileInfo) {
+        fileInfo.innerHTML = `
+            <strong>Selected File:</strong> ${file.name}<br>
+            <strong>Size:</strong> ${fileSize} MB<br>
+            <strong>Type:</strong> ${file.type || 'Unknown'}
+        `;
+        fileInfo.style.display = 'block';
+    }
+}
+
+// Apply context (called by Apply/Update button)
+function applyContext() {
+    // Update session metrics
+    updateSessionMetrics();
     
-    // Show loading
-    analyzeBtn.innerHTML = '<span class="spinner"></span>Analyzing...';
-    analyzeBtn.disabled = true;
+    // Show success message
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = 'Applied!';
+    button.style.backgroundColor = '#00c851';
     
-    // Create form data
+    setTimeout(() => {
+        button.textContent = originalText;
+        button.style.backgroundColor = '';
+    }, 2000);
+}
+
+// Update session metrics in sidebar
+function updateSessionMetrics() {
+    const filesProcessed = document.getElementById('files-processed');
+    const eventsAnalyzed = document.getElementById('events-analyzed');
+    const issuesFound = document.getElementById('issues-found');
+    
+    if (analysisResults) {
+        if (filesProcessed) filesProcessed.textContent = analysisResults.files_processed || 0;
+        if (eventsAnalyzed) eventsAnalyzed.textContent = analysisResults.events_analyzed || 0;
+        if (issuesFound) issuesFound.textContent = analysisResults.issues_found || 0;
+    }
+}
+
+// Upload file to server
+async function uploadFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     
+    // Get context data
+    const contextData = getContextData();
+    Object.keys(contextData).forEach(key => {
+        formData.append(key, contextData[key]);
+    });
+
     try {
-        const response = await fetch('/analyze', {
+        const response = await fetch('/upload', {
             method: 'POST',
             body: formData
         });
         
         const result = await response.json();
         
-        if (result.error) {
-            throw new Error(result.error);
+        if (result.success) {
+            analysisResults = result;
+            currentStep = 2;
+            updateProgressSteps();
+            updateSessionMetrics();
+            showAnalysisResults(result);
+        } else {
+            alert('Upload failed: ' + result.error);
         }
-        
-        // Store analysis data
-        analysisData = result;
-        
-        // Show results
-        updateProgress(3);
-        document.getElementById('resultsSection').style.display = 'block';
-        displayResults(result);
-        
-        // Scroll to results
-        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
-        
     } catch (error) {
-        alert('Analysis failed: ' + error.message);
-    } finally {
-        analyzeBtn.innerHTML = 'Analyze Log File';
-        analyzeBtn.disabled = false;
+        console.error('Upload error:', error);
+        alert('Upload failed: ' + error.message);
     }
 }
 
-// Tab switching
-function showTab(tabName) {
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
-    event.target.classList.add('active');
-    document.getElementById(tabName + 'Tab').classList.add('active');
+// Get context data from form
+function getContextData() {
+    return {
+        user_name: document.getElementById('user-name')?.value || '',
+        app_name: document.getElementById('app-name')?.value || '',
+        app_version: document.getElementById('app-version')?.value || '',
+        test_environment: document.getElementById('test-environment')?.value || '',
+        issue_description: document.getElementById('issue-description')?.value || '',
+        deployment_method: document.getElementById('deployment-method')?.value || '',
+        build_number: document.getElementById('build-number')?.value || '',
+        build_changes: document.getElementById('build-changes')?.value || '',
+        previous_version: document.getElementById('previous-version')?.value || '',
+        use_python_engine: document.getElementById('python-engine')?.checked || false,
+        use_local_llm: document.getElementById('local-llm')?.checked || false,
+        use_cloud_ai: document.getElementById('cloud-ai')?.checked || false
+    };
 }
 
-// Display analysis results
-function displayResults(result) {
-    // Show metric cards
-    if (result.events_count !== undefined) {
-        const metricsHtml = `
+// Show analysis results
+function showAnalysisResults(results) {
+    const analysisSection = document.getElementById('analysis-section');
+    const metricCards = document.getElementById('metric-cards');
+    
+    // Show metrics
+    if (results.metrics && metricCards) {
+        metricCards.innerHTML = Object.entries(results.metrics).map(([key, value]) => `
             <div class="metric-card">
-                <h3>${result.events_count || 0}</h3>
-                <p>Total Events</p>
+                <div class="metric-value">${value}</div>
+                <div class="metric-label">${key}</div>
             </div>
-            <div class="metric-card">
-                <h3>${result.issues_found || 0}</h3>
-                <p>Issues Found</p>
-            </div>
-            <div class="metric-card">
-                <h3>${result.critical_errors || 0}</h3>
-                <p>Critical Errors</p>
-            </div>
-            <div class="metric-card">
-                <h3>${result.warnings || 0}</h3>
-                <p>Warnings</p>
-            </div>
-        `;
-        document.getElementById('metricCards').innerHTML = metricsHtml;
-        document.getElementById('metricCards').style.display = 'grid';
+        `).join('');
     }
     
-    // Display timeline and issues
-    displayTimelineResults(result);
-    displayIssuesResults(result);
-}
-
-// Display timeline results
-function displayTimelineResults(result) {
-    const timelineDiv = document.getElementById('timelineResults');
-    
-    if (result.events && result.events.length > 0) {
-        let timelineHtml = '<h4>Event Timeline</h4>';
-        timelineHtml += '<table class="data-table"><thead><tr><th>Time</th><th>Level</th><th>Message</th></tr></thead><tbody>';
-        
-        result.events.slice(0, 20).forEach(event => {
-            const levelClass = event.level === 'ERROR' ? 'error' : event.level === 'WARNING' ? 'warning' : '';
-            timelineHtml += `
-                <tr>
-                    <td>${event.timestamp || 'N/A'}</td>
-                    <td><span class="${levelClass}">${event.level || 'INFO'}</span></td>
-                    <td>${event.message || event.content || ''}</td>
-                </tr>
-            `;
-        });
-        
-        timelineHtml += '</tbody></table>';
-        
-        if (result.events.length > 20) {
-            timelineHtml += `<p><em>Showing first 20 of ${result.events.length} events</em></p>`;
-        }
-        
-        timelineDiv.innerHTML = timelineHtml;
-    } else {
-        timelineDiv.innerHTML = '<p>No timeline data available</p>';
+    if (analysisSection) {
+        analysisSection.style.display = 'block';
     }
+    currentStep = 3;
+    updateProgressSteps();
 }
 
-// Display issues results
-function displayIssuesResults(result) {
-    const issuesDiv = document.getElementById('issuesResults');
-    
-    if (result.issues && result.issues.length > 0) {
-        let issuesHtml = '<h4>Issues Identified</h4>';
-        
-        result.issues.forEach(issue => {
-            issuesHtml += `
-                <div class="event-item">
-                    <strong>${issue.type || 'Issue'}</strong>: ${issue.description || issue.message || 'No description'}
-                    ${issue.count ? `<br><small>Occurrences: ${issue.count}</small>` : ''}
-                </div>
-            `;
-        });
-        
-        issuesDiv.innerHTML = issuesHtml;
-    } else {
-        issuesDiv.innerHTML = '<p>No specific issues identified</p>';
-    }
-}
-
-// Generate reports
-async function generateReport(reportType) {
-    if (!analysisData) {
-        alert('Please analyze a log file first');
+// Run ML Analysis
+async function runMLAnalysis(analysisType) {
+    if (!analysisResults) {
+        alert('No analysis results available. Please upload and analyze a file first.');
         return;
     }
-    
-    const button = event.target;
-    const originalText = button.innerHTML;
-    
-    // Show loading
-    button.innerHTML = '<span class="spinner"></span>Generating...';
-    button.disabled = true;
-    
+
     try {
-        const response = await fetch('/generate_report', {
+        const response = await fetch('/ml_analysis', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
-                report_type: reportType,
-                use_local_llm: document.getElementById('useLocalLLM').checked,
-                use_cloud_ai: document.getElementById('useCloudAI').checked,
-                use_python_engine: document.getElementById('usePythonEngine').checked
+                analysis_type: analysisType
             })
         });
         
         const result = await response.json();
         
-        if (result.error) {
-            throw new Error(result.error);
+        if (result.success) {
+            const mlResults = document.getElementById('ml-results');
+            if (mlResults) {
+                mlResults.innerHTML = `
+                    <div class="info-card">
+                        <h4>${analysisType.toUpperCase()} Analysis Complete</h4>
+                        <p>${result.summary || 'Analysis completed successfully.'}</p>
+                    </div>
+                `;
+            }
+        } else {
+            alert('ML Analysis failed: ' + result.error);
         }
-        
-        // Display report results
-        displayReportResults(result, reportType);
-        
-        updateProgress(4);
-        
     } catch (error) {
-        alert('Report generation failed: ' + error.message);
-    } finally {
-        button.innerHTML = originalText;
-        button.disabled = false;
+        console.error('ML Analysis error:', error);
+        alert('ML Analysis failed: ' + error.message);
     }
 }
 
-// Display report results
-function displayReportResults(result, reportType) {
-    const reportDiv = document.getElementById('reportResults');
-    
-    let reportHtml = `<h4>${reportType.toUpperCase()} Report Generated</h4>`;
-    
-    if (result.ai_analysis) {
-        reportHtml += `
-            <div class="ai-section">
-                <h5>🤖 AI Analysis</h5>
-                <p>${result.ai_analysis}</p>
-            </div>
-        `;
-    }
-    
-    if (result.summary) {
-        reportHtml += `
-            <div class="info">
-                <strong>Summary:</strong> ${result.summary}
-            </div>
-        `;
-    }
-    
-    if (result.recommendations && result.recommendations.length > 0) {
-        reportHtml += '<h5>Recommendations:</h5><ul>';
-        result.recommendations.forEach(rec => {
-            reportHtml += `<li>${rec}</li>`;
-        });
-        reportHtml += '</ul>';
-    }
-    
-    if (result.download_url) {
-        reportHtml += `
-            <div style="margin-top: 20px;">
-                <a href="${result.download_url}" class="btn btn-success" download>Download Report</a>
-            </div>
-        `;
-    }
-    
-    reportDiv.innerHTML = reportHtml;
-}
-
-// ML Analysis functions
-async function runClustering() {
-    await runMLAnalysis('clustering', 'Run Clustering');
-}
-
-async function runSeverityPrediction() {
-    await runMLAnalysis('severity', 'Severity Prediction');
-}
-
-async function runAnomalyDetection() {
-    await runMLAnalysis('anomaly', 'Anomaly Detection');
-}
-
-async function runMLAnalysis(analysisType, buttonText) {
-    if (!analysisData) {
-        alert('Please analyze a log file first');
+// Generate report
+async function generateReport(reportType) {
+    if (!analysisResults) {
+        alert('No analysis results available. Please upload and analyze a file first.');
         return;
     }
-    
-    const button = event.target;
-    const originalText = button.innerHTML;
-    
-    button.innerHTML = '<span class="spinner"></span>Running...';
-    button.disabled = true;
+
+    const contextData = getContextData();
     
     try {
-        const response = await fetch('/ml_analysis', {
+        const response = await fetch('/generate_report', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ analysis_type: analysisType })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                report_type: reportType,
+                ...contextData
+            })
         });
         
         const result = await response.json();
         
-        if (result.error) {
-            throw new Error(result.error);
+        if (result.success) {
+            showReportResults(result, reportType);
+            currentStep = 4;
+            updateProgressSteps();
+        } else {
+            alert('Report generation failed: ' + result.error);
         }
-        
-        // Display ML results
-        displayMLResults(result, analysisType);
-        
     } catch (error) {
-        alert(`${buttonText} failed: ` + error.message);
-    } finally {
-        button.innerHTML = originalText;
-        button.disabled = false;
+        console.error('Report generation error:', error);
+        alert('Report generation failed: ' + error.message);
     }
 }
 
-// Display ML results
-function displayMLResults(result, analysisType) {
-    const mlDiv = document.getElementById('mlResults');
+// Show report results
+function showReportResults(result, reportType) {
+    const reportResults = document.getElementById('report-results');
     
-    let resultsHtml = `<h5>${analysisType.toUpperCase()} Results</h5>`;
+    if (!reportResults) return;
     
-    if (result.clusters) {
-        resultsHtml += '<h6>Clusters Found:</h6>';
-        result.clusters.forEach((cluster, index) => {
-            resultsHtml += `
-                <div class="event-item">
-                    <strong>Cluster ${index + 1}</strong> (${cluster.size} events)<br>
-                    <small>${cluster.description || 'No description'}</small>
-                </div>
-            `;
-        });
+    let content = `<h3>${reportType.replace('_', ' ').toUpperCase()} Report Generated</h3>`;
+    
+    if (result.ai_summary) {
+        content += `
+            <div class="info-card">
+                <h4>AI Analysis Summary</h4>
+                <p>${result.ai_summary.replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
     }
     
-    if (result.anomalies) {
-        resultsHtml += '<h6>Anomalies Detected:</h6>';
-        result.anomalies.forEach(anomaly => {
-            resultsHtml += `
-                <div class="event-item">
-                    <strong>Anomaly:</strong> ${anomaly.description}<br>
-                    <small>Score: ${anomaly.score}</small>
-                </div>
-            `;
-        });
+    if (result.download_url) {
+        content += `
+            <div style="margin-top: 1rem;">
+                <a href="${result.download_url}" class="btn btn-success" download>
+                    Download PDF Report
+                </a>
+            </div>
+        `;
     }
     
-    if (result.predictions) {
-        resultsHtml += '<h6>Severity Predictions:</h6>';
-        result.predictions.forEach(pred => {
-            resultsHtml += `
-                <div class="event-item">
-                    <strong>${pred.level}:</strong> ${pred.message}<br>
-                    <small>Confidence: ${pred.confidence}</small>
-                </div>
-            `;
-        });
-    }
-    
-    mlDiv.innerHTML = resultsHtml;
+    reportResults.innerHTML = content;
 }

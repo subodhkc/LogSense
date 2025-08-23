@@ -14,6 +14,9 @@ image = (
 
 app = modal.App(name=APP_NAME, image=image)
 
+# Global cache for analysis results
+_analysis_cache = {}
+
 # Deploy the FastAPI app with warm containers and Modal best practices
 @app.function(
     timeout=300,  # 5 minute timeout for startup
@@ -95,8 +98,9 @@ def native_app():
             analysis_result = analyze_events(events)
             
             # Cache results
-            analysis_cache['events'] = events
-            analysis_cache['analysis'] = analysis_result
+            _analysis_cache['events'] = events
+            _analysis_cache['analysis'] = analysis_result
+            _analysis_cache['user_context'] = user_context
             
             return JSONResponse({
                 "status": "success",
@@ -213,18 +217,36 @@ def native_app():
                     "ai_engine": ai_engine_used
                 }
             
-            return JSONResponse({
+            # Format response for frontend compatibility
+            response_data = {
                 "status": "success",
                 "message": message,
                 "report_type": report_type,
-                "report_content": report_content,
+                "summary": report_content.get("summary", "Report generated successfully"),
                 "engines_used": {
                     "local_llm": use_local_llm and report_type == 'local_ai',
                     "cloud_ai": use_cloud_ai and report_type == 'cloud_ai',
                     "python_engine": use_python_engine
                 },
-                "timestamp": datetime.now().isoformat()
-            })
+                "timestamp": datetime.now().isoformat(),
+                "events_analyzed": report_content.get("events_analyzed", len(events))
+            }
+            
+            # Add AI analysis if available
+            if report_content.get("ai_summary"):
+                response_data["ai_analysis"] = report_content["ai_summary"]
+            
+            # Add Python insights as recommendations
+            if report_content.get("python_insights"):
+                response_data["recommendations"] = report_content["python_insights"]
+            elif report_content.get("ai_summary"):
+                response_data["recommendations"] = [
+                    "Review critical errors identified in the analysis",
+                    "Check system components with highest error rates",
+                    "Verify deployment configuration and dependencies"
+                ]
+            
+            return JSONResponse(response_data)
             
         except Exception as e:
             print(f"[ERROR] Report generation failed: {e}")
