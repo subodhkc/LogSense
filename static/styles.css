@@ -1,4 +1,4 @@
-/* Streamlit-style CSS with Sidebar Layout */
+/* Streamlit-style CSS */
 * {
     margin: 0;
     padding: 0;
@@ -12,19 +12,17 @@ body {
     line-height: 1.6;
 }
 
-/* Main Container */
+/* Main Container - Single column like Streamlit */
 .main-container {
-    display: flex;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
     min-height: 100vh;
 }
 
-/* Sidebar */
+/* Hide sidebar for Streamlit-style layout */
 .sidebar {
-    width: 300px;
-    background-color: #f0f2f6;
-    border-right: 1px solid #e6e9ef;
-    padding: 1rem;
-    overflow-y: auto;
+    display: none;
 }
 
 .sidebar-header {
@@ -83,21 +81,37 @@ body {
     text-transform: uppercase;
 }
 
-/* Main Content */
+/* Main Content - Full width like Streamlit */
 .main-content {
-    flex: 1;
-    padding: 2rem;
+    width: 100%;
+    padding: 0;
     overflow-y: auto;
 }
 
-/* Header */
-.header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+/* Streamlit-style Header */
+.streamlit-header {
+    text-align: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid #e6e9ef;
+}
+
+.streamlit-header h1 {
+    color: #262730;
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.streamlit-header p {
+    color: #808495;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* Hide old header */
+.header {
+    display: none;
 }
 
 .header-left h1 {
@@ -135,9 +149,12 @@ body {
 .progress-indicator {
     display: flex;
     justify-content: center;
-    align-items: center;
-    margin-bottom: 2rem;
     gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid #ff4b4b;
 }
 
 .progress-step {
@@ -195,25 +212,28 @@ body {
 
 /* Expanders */
 .expander {
-    border: 1px solid #e6e9ef;
-    border-radius: 0.5rem;
     margin-bottom: 1rem;
+    border: 1px solid #e6e9ef;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .expander-header {
-    background-color: #f8f9fa;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: #fafafa;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: 600;
-    color: #262730;
-    border-radius: 0.5rem 0.5rem 0 0;
+    font-weight: 400;
+    font-size: 0.875rem;
+    transition: background-color 0.3s ease;
+    border-left: 4px solid transparent;
 }
 
 .expander-header:hover {
-    background-color: #e9ecef;
+    background-color: #f0f2f6;
+    border-left-color: #ff4b4b;
 }
 
 .expander-arrow {
@@ -245,23 +265,22 @@ body {
 
 .form-group label {
     display: block;
-    font-weight: 600;
+    margin-bottom: 0.25rem;
+    font-weight: 400;
     color: #262730;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem;
     border: 1px solid #e6e9ef;
-    border-radius: 0.25rem;
-    font-size: 0.9rem;
-    font-family: inherit;
-    background-color: #ffffff;
-    transition: border-color 0.2s ease;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    transition: border-color 0.3s ease;
+    background-color: #fff;
 }
 
 .form-group input:focus,
@@ -269,7 +288,7 @@ body {
 .form-group textarea:focus {
     outline: none;
     border-color: #ff4b4b;
-    box-shadow: 0 0 0 1px #ff4b4b;
+    box-shadow: 0 0 0 1px rgba(255, 75, 75, 0.2);
 }
 
 .form-group textarea {
@@ -279,18 +298,25 @@ body {
 
 /* Upload Area */
 .upload-area {
-    border: 2px dashed #e6e9ef;
-    border-radius: 0.5rem;
-    padding: 3rem 2rem;
+    border: 1px solid #e6e9ef;
+    border-radius: 4px;
+    padding: 1.5rem;
     text-align: center;
-    background-color: #fafbfc;
-    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+    background-color: #fafafa;
+    transition: all 0.3s ease;
     cursor: pointer;
 }
 
 .upload-area:hover {
     border-color: #ff4b4b;
+    background-color: #fff;
+}
+
+.upload-area.dragover {
+    border-color: #ff4b4b;
     background-color: #fff5f5;
+    transform: scale(1.02);
 }
 
 .upload-icon {
@@ -298,11 +324,13 @@ body {
     font-weight: 600;
     color: #808495;
     margin-bottom: 1rem;
-}
-
-.upload-hint {
-    color: #808495;
-    font-size: 0.9rem;
+    padding: 20px;
+    background: rgba(52, 152, 219, 0.1);
+    border-radius: 50%;
+    display: inline-block;
+    width: 100px;
+    height: 100px;
+    line-height: 60px;
 }
 
 /* File Info */
@@ -315,67 +343,76 @@ body {
 
 /* Buttons */
 .btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 0.25rem;
-    font-size: 0.9rem;
-    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border: 1px solid #ff4b4b;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 400;
     text-decoration: none;
     display: inline-block;
-    text-align: center;
+    transition: all 0.3s ease;
+    background-color: #fff;
+    color: #ff4b4b;
 }
 
 .btn-primary {
     background-color: #ff4b4b;
     color: white;
+    border-color: #ff4b4b;
 }
 
 .btn-primary:hover {
-    background-color: #ff3333;
+    background-color: #e63946;
+    border-color: #e63946;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.btn-secondary {
-    background-color: #f0f2f6;
-    color: #262730;
-    border: 1px solid #e6e9ef;
+.btn-success {
+    background-color: #00c851;
+    color: white;
+    border-color: #00c851;
 }
 
-.btn-secondary:hover {
-    background-color: #e6e9ef;
+.btn-success:hover {
+    background-color: #007e33;
+    border-color: #007e33;
 }
 
 /* Tabs */
 .tabs {
-    margin-top: 2rem;
+    margin-top: 1.5rem;
 }
 
 .tab-buttons {
     display: flex;
     border-bottom: 1px solid #e6e9ef;
     margin-bottom: 1rem;
+    gap: 0;
 }
 
 .tab-button {
-    padding: 1rem 1.5rem;
+    padding: 0.5rem 1rem;
     border: none;
     background: none;
-    color: #808495;
-    font-weight: 600;
-    font-size: 0.9rem;
     cursor: pointer;
+    font-size: 0.875rem;
+    color: #808495;
     border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
-}
-
-.tab-button:hover {
-    color: #262730;
+    transition: all 0.3s ease;
+    border-radius: 4px 4px 0 0;
 }
 
 .tab-button.active {
     color: #ff4b4b;
     border-bottom-color: #ff4b4b;
+    background-color: #fff;
+    font-weight: 500;
+}
+
+.tab-button:hover {
+    color: #262730;
+    background-color: #fafafa;
 }
 
 .tab-content {
@@ -388,21 +425,26 @@ body {
 
 /* Info Cards */
 .info-card {
-    background-color: #f0f2f6;
-    border-left: 4px solid #ff4b4b;
+    background-color: #fafafa;
+    border: 1px solid #e6e9ef;
+    border-radius: 4px;
     padding: 1rem;
-    margin-bottom: 1.5rem;
-    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #ff4b4b;
 }
 
 .info-card h4 {
-    margin: 0 0 0.5rem 0;
-    color: #ff4b4b;
+    color: #262730;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
 }
 
 .info-card p {
+    color: #808495;
     margin: 0;
-    color: #262730;
+    line-height: 1.5;
+    font-size: 0.875rem;
 }
 
 /* Button Groups */
@@ -416,23 +458,36 @@ body {
 
 /* Metric Cards */
 .metric-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    display: flex;
     gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
 }
 
 .metric-card {
-    background-color: #ffffff;
+    background-color: #fff;
     border: 1px solid #e6e9ef;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    text-align: center;
+    border-radius: 4px;
+    padding: 1rem;
+    text-align: left;
+    min-width: 150px;
+    flex: 1;
 }
 
-/* Checkbox Container */
-.checkbox-container {
-    margin-bottom: 1rem;
+.metric-card .metric-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #ff4b4b;
+    margin-bottom: 0.25rem;
+    line-height: 1;
+}
+
+.metric-card .metric-label {
+    font-size: 0.75rem;
+    color: #808495;
+    text-transform: uppercase;
+    font-weight: 400;
+    letter-spacing: 0.5px;
 }
 
 /* Responsive Design */
