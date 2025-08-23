@@ -282,6 +282,45 @@ def economical_app():
                 "message": f"ML analysis failed: {str(e)}"
             }, status_code=500)
     
+    @web_app.post("/submit_context")
+    async def submit_context(request: Request):
+        """Handle context form submission"""
+        try:
+            data = await request.json()
+            
+            # Store context data in session cache
+            current_data = session_cache.get("current", {})
+            current_data.update({
+                "context": {
+                    "user_name": data.get("user_name", ""),
+                    "app_name": data.get("app_name", ""),
+                    "app_version": data.get("app_version", ""),
+                    "test_environment": data.get("test_environment", ""),
+                    "issue_description": data.get("issue_description", ""),
+                    "deployment_method": data.get("deployment_method", ""),
+                    "build_number": data.get("build_number", ""),
+                    "build_changes": data.get("build_changes", ""),
+                    "previous_version": data.get("previous_version", ""),
+                    "use_python_engine": data.get("use_python_engine", False),
+                    "use_local_llm": data.get("use_local_llm", False),
+                    "use_cloud_ai": data.get("use_cloud_ai", False)
+                },
+                "context_updated": True
+            })
+            session_cache["current"] = current_data
+            
+            return JSONResponse({
+                "status": "success",
+                "message": "Context saved successfully"
+            })
+            
+        except Exception as e:
+            print(f"Context submission error: {str(e)}")
+            return JSONResponse({
+                "status": "error",
+                "error": f"Failed to save context: {str(e)}"
+            }, status_code=500)
+    
     @web_app.post("/correlations")
     async def correlation_analysis(request: Request):
         """Handle correlation analysis requests"""
