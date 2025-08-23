@@ -31,4 +31,4 @@ jobs:
 
       - name: Deploy native app to Modal
         working-directory: ./
-        run: modal deploy modal_native.py
+        run: modal deploy modal_native.py --name logsense-native-complete
