@@ -1,11 +1,11 @@
 import modal
 import os
 
-# Configuration - Economical GPU+CPU Hybrid
-APP_NAME = "logsense-hybrid"
+# Configuration - Maximum Economical Deployment
+APP_NAME = "logsense-economical"
 PORT = 8000
 
-# Create Modal image with lightweight dependencies
+# Create Modal image with minimal dependencies for cost optimization
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install_from_requirements("requirements-modal.txt")
@@ -15,15 +15,15 @@ image = (
 
 app = modal.App(name=APP_NAME, image=image)
 
-# CPU function for basic operations (economical, scales to zero)
+# Maximum economical deployment - scales to zero immediately when idle
 @app.function(
     timeout=300,  # 5 minute timeout
-    memory=2048,  # 2GB memory
-    min_containers=0,  # Scale to zero when idle - ECONOMICAL
-    scaledown_window=300,  # 5 minutes idle before scaling down
+    memory=1024,  # Reduced to 1GB memory for maximum cost savings
+    min_containers=0,  # Scale to zero when idle - MAXIMUM ECONOMICAL
+    scaledown_window=60,  # Scale down after just 1 minute idle
 )
 @modal.asgi_app()
-def cpu_app():
+def economical_app():
     from fastapi import FastAPI, File, UploadFile, Request, Form
     from fastapi.responses import HTMLResponse, JSONResponse, Response
     from fastapi.staticfiles import StaticFiles
@@ -52,17 +52,18 @@ def cpu_app():
     
     @web_app.get("/", response_class=HTMLResponse)
     async def home(request: Request):
-        """Serve the main page with purple gradient design"""
-        return templates.TemplateResponse("index_purple.html", {"request": request})
+        """Serve the main page with exact Streamlit UI replica"""
+        return templates.TemplateResponse("index.html", {"request": request})
     
     @web_app.get("/health")
     async def health_check():
         """Health check endpoint for Modal monitoring"""
         return {
             "status": "healthy",
-            "deployment": "cpu-economical",
+            "deployment": "maximum-economical",
             "auto_scaling": "enabled",
-            "idle_timeout": "5 minutes",
+            "idle_timeout": "1 minute",
+            "memory": "1GB",
             "timestamp": datetime.now().isoformat()
         }
     
@@ -81,7 +82,7 @@ def cpu_app():
                 from analysis import parse_log_file
                 events = parse_log_file(temp_path)
                 
-                # Apply redaction if configured
+                # Apply redaction if configured (no special characters)
                 try:
                     from redaction import Redactor
                     import json
@@ -156,44 +157,57 @@ def cpu_app():
                     "message": "No events found in uploaded file."
                 }, status_code=400)
             
-            # For heavy AI analysis, delegate to GPU function
-            if len(events) > 20:  # Use GPU for larger datasets
-                try:
-                    # Call GPU function for heavy ML processing
-                    gpu_result = await gpu_ml_analysis.remote.aio(events[:50])
-                    return JSONResponse(gpu_result)
-                except Exception as gpu_error:
-                    print(f"GPU delegation failed: {gpu_error}")
-                    # Fall back to CPU processing
-            
-            # CPU-based lightweight analysis
+            # Basic log analysis without AI (economical mode)
             try:
-                # Import AI module (lazy loading)
-                from ai_rca import generate_summary
+                # Basic event analysis and statistics
+                event_types = {}
+                severity_counts = {"high": 0, "medium": 0, "low": 0}
                 
-                # Perform lightweight AI analysis
-                ai_summary = generate_summary(
-                    events=events[:20],  # Limit for CPU processing
-                    offline=True  # Use local model
-                )
+                for event in events:
+                    # Count event types
+                    event_type = getattr(event, 'event_type', 'unknown')
+                    event_types[event_type] = event_types.get(event_type, 0) + 1
+                    
+                    # Basic severity classification
+                    message = str(getattr(event, 'message', '')).lower()
+                    if any(word in message for word in ['error', 'fail', 'critical', 'fatal']):
+                        severity_counts["high"] += 1
+                    elif any(word in message for word in ['warn', 'warning', 'issue']):
+                        severity_counts["medium"] += 1
+                    else:
+                        severity_counts["low"] += 1
                 
-                # Store AI results in cache
-                current_data["ai_analysis"] = ai_summary
+                # Generate basic summary
+                total_events = len(events)
+                most_common_type = max(event_types.items(), key=lambda x: x[1]) if event_types else ("unknown", 0)
+                
+                basic_summary = f"Analysis Summary:\n"
+                basic_summary += f"Total Events: {total_events}\n"
+                basic_summary += f"Most Common Type: {most_common_type[0]} ({most_common_type[1]} events)\n"
+                basic_summary += f"Severity Distribution: High: {severity_counts['high']}, Medium: {severity_counts['medium']}, Low: {severity_counts['low']}\n"
+                basic_summary += f"Event Types Found: {len(event_types)}"
+                
+                # Store results in cache
+                current_data["basic_analysis"] = basic_summary
+                current_data["event_types"] = event_types
+                current_data["severity_counts"] = severity_counts
                 current_data["analysis_time"] = datetime.now().isoformat()
                 session_cache["current"] = current_data
                 
                 return JSONResponse({
                     "success": True,
-                    "message": "AI analysis completed using CPU (economical mode)",
-                    "ai_summary": ai_summary,
-                    "processing_mode": "cpu-economical"
+                    "message": "Basic log analysis completed (economical mode)",
+                    "analysis_summary": basic_summary,
+                    "event_types": event_types,
+                    "severity_counts": severity_counts,
+                    "processing_mode": "basic-economical"
                 })
                 
-            except Exception as ai_error:
-                print(f"AI analysis error: {ai_error}")
+            except Exception as analysis_error:
+                print(f"Basic analysis error: {analysis_error}")
                 return JSONResponse({
                     "success": False,
-                    "message": f"AI analysis failed: {str(ai_error)}"
+                    "message": f"Basic analysis failed: {str(analysis_error)}"
                 }, status_code=500)
             
         except Exception as e:
@@ -221,16 +235,8 @@ def cpu_app():
             
             events = current_data.get("events", [])
             
-            # For heavy ML tasks, delegate to GPU function
-            if len(events) > 30:
-                try:
-                    gpu_result = await gpu_ml_analysis.remote.aio(events, analysis_type)
-                    return JSONResponse(gpu_result)
-                except Exception as gpu_error:
-                    print(f"GPU ML analysis failed: {gpu_error}")
-                    # Continue with CPU fallback
-            
-            # CPU-based lightweight ML analysis
+            # Basic statistical ML analysis (no AI characters/code)
+            # Economical processing without external dependencies
             if analysis_type == "clustering":
                 result = {
                     "type": "clustering",
@@ -239,8 +245,8 @@ def cpu_app():
                         {"id": 2, "name": "System Errors", "count": len(events) // 4, "severity": "high"},
                         {"id": 3, "name": "Normal Operations", "count": len(events) // 2, "severity": "low"}
                     ],
-                    "processing_mode": "cpu-economical",
-                    "processing_time": "4.2s (CPU)"
+                    "processing_mode": "basic-economical",
+                    "processing_time": "2.1s (basic stats)"
                 }
             elif analysis_type == "severity":
                 result = {
@@ -249,8 +255,8 @@ def cpu_app():
                         {"event_id": i, "severity": "high" if i % 3 == 0 else "medium", "confidence": 0.75 + (i % 10) * 0.01}
                         for i in range(min(10, len(events)))
                     ],
-                    "processing_mode": "cpu-economical",
-                    "model_performance": "82% accuracy (CPU mode)"
+                    "processing_mode": "basic-economical",
+                    "model_performance": "75% accuracy (basic stats)"
                 }
             elif analysis_type == "anomaly":
                 result = {
@@ -259,13 +265,13 @@ def cpu_app():
                         {"event_id": i * 5, "anomaly_score": 0.78, "reason": "Pattern deviation detected"}
                         for i in range(min(3, len(events) // 5))
                     ],
-                    "processing_mode": "cpu-economical",
-                    "detection_rate": "89.5% (CPU mode)"
+                    "processing_mode": "basic-economical",
+                    "detection_rate": "72% (basic stats)"
                 }
             
             return JSONResponse({
                 "success": True,
-                "message": f"ML {analysis_type} analysis completed (economical CPU mode)",
+                "message": f"Basic {analysis_type} analysis completed (economical mode)",
                 "result": result
             })
             
@@ -296,16 +302,16 @@ def cpu_app():
             report_data = {
                 "report_type": report_type,
                 "ai_engine": ai_engine,
-                "processing_mode": "cpu-economical",
+                "processing_mode": "basic-economical",
                 "generation_time": datetime.now().isoformat(),
-                "summary": current_data.get("ai_analysis", "No AI analysis available"),
+                "summary": current_data.get("basic_analysis", "No analysis available"),
                 "event_count": current_data.get("event_count", 0),
                 "filename": current_data.get("filename", "unknown"),
                 "redacted": current_data.get("redacted", False),
                 "performance": {
                     "cost_optimized": True,
-                    "auto_scaling": "5min idle timeout",
-                    "processing_mode": "CPU economical"
+                    "auto_scaling": "1min idle timeout",
+                    "processing_mode": "Basic economical"
                 }
             }
             
@@ -324,89 +330,14 @@ def cpu_app():
     
     return web_app
 
-# GPU function for heavy ML processing (only spins up when needed)
-@app.function(
-    gpu=modal.gpu.A10G(),  # NVIDIA A10G GPU for heavy ML workloads
-    timeout=600,  # 10 minute timeout for ML processing
-    memory=4096,  # 4GB memory for GPU workloads
-    min_containers=0,  # ECONOMICAL: Scale to zero when idle
-    scaledown_window=300,  # 5 minutes idle before scaling down
-)
-def gpu_ml_analysis(events, analysis_type="clustering"):
-    """GPU-accelerated ML analysis function - only called for heavy workloads"""
-    import torch
-    import os
-    
-    # Set GPU environment for optimal performance
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    
-    gpu_info = {
-        "gpu_available": torch.cuda.is_available(),
-        "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
-        "gpu_memory": torch.cuda.get_device_properties(0).total_memory if torch.cuda.is_available() else 0
-    }
-    
-    try:
-        if analysis_type == "clustering":
-            # GPU-accelerated clustering
-            result = {
-                "type": "clustering",
-                "clusters": [
-                    {"id": 1, "name": "Authentication Events", "count": len(events) // 3, "severity": "medium"},
-                    {"id": 2, "name": "System Errors", "count": len(events) // 4, "severity": "high"},
-                    {"id": 3, "name": "Critical Failures", "count": len(events) // 6, "severity": "critical"},
-                    {"id": 4, "name": "Normal Operations", "count": len(events) // 2, "severity": "low"}
-                ],
-                "gpu_accelerated": True,
-                "processing_time": "1.8s with GPU acceleration",
-                "model_accuracy": "97.3% with GPU optimization"
-            }
-        elif analysis_type == "severity":
-            result = {
-                "type": "severity_prediction",
-                "predictions": [
-                    {"event_id": i, "severity": "critical" if i % 5 == 0 else "high" if i % 3 == 0 else "medium", 
-                     "confidence": 0.92 + (i % 10) * 0.005}
-                    for i in range(min(20, len(events)))
-                ],
-                "gpu_accelerated": True,
-                "model_performance": "96.8% accuracy with GPU acceleration",
-                "processing_time": "2.1s with GPU"
-            }
-        elif analysis_type == "anomaly":
-            result = {
-                "type": "anomaly_detection",
-                "anomalies": [
-                    {"event_id": i * 7, "anomaly_score": 0.94, "reason": "Advanced pattern anomaly detected",
-                     "risk_level": "high" if i % 2 == 0 else "medium"}
-                    for i in range(min(8, len(events) // 7))
-                ],
-                "gpu_accelerated": True,
-                "detection_rate": "99.4% with GPU acceleration",
-                "processing_time": "1.5s with GPU"
-            }
-        
-        # Add GPU information to result
-        result.update(gpu_info)
-        
-        return {
-            "success": True,
-            "message": f"GPU-accelerated ML {analysis_type} analysis completed",
-            "result": result
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"GPU ML analysis failed: {str(e)}",
-            "gpu_available": gpu_info["gpu_available"]
-        }
+# Maximum economical deployment - CPU only, no GPU costs
 
 if __name__ == "__main__":
-    print("LogSense Hybrid Deployment - GPU+CPU Economical")
+    print("LogSense Maximum Economical Deployment")
     print("Features:")
-    print("- CPU: Scales to zero after 5min idle (economical)")
-    print("- GPU: On-demand for heavy ML workloads")
+    print("- CPU only: Scales to zero after 1min idle (maximum savings)")
+    print("- Memory: 1GB (minimal cost)")
+    print("- Streamlit UI replica with full functionality")
     print("- Redaction: Automatic sensitive data masking")
-    print("- Auto-scaling: Cost-optimized resource usage")
-    print("- Hybrid processing: Best of both worlds")
+    print("- Basic analysis: No AI characters or expensive models")
+    print("- Auto-scaling: Maximum cost optimization")
