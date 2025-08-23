@@ -48,10 +48,10 @@ function toggleExpander(expanderId) {
     
     if (content.classList.contains('expanded')) {
         content.classList.remove('expanded');
-        arrow.textContent = '▶';
+        arrow.textContent = '>';
     } else {
         content.classList.add('expanded');
-        arrow.textContent = '▼';
+        arrow.textContent = 'v';
     }
 }
 
@@ -154,20 +154,49 @@ function showFileInfo(file) {
 }
 
 // Apply context (called by Apply/Update button)
-function applyContext() {
-    // Update session metrics
+async function applyContext() {
+    // Update session metrics locally
     updateSessionMetrics();
-    
-    // Show success message
-    const button = event.target;
-    const originalText = button.textContent;
-    button.textContent = 'Applied!';
-    button.style.backgroundColor = '#00c851';
-    
-    setTimeout(() => {
-        button.textContent = originalText;
-        button.style.backgroundColor = '';
-    }, 2000);
+
+    // Button feedback
+    const btn = (typeof event !== 'undefined' && event && event.target) ? event.target : document.querySelector('button[onclick*="applyContext"]');
+    const originalText = btn ? btn.textContent : '';
+    if (btn) {
+        btn.textContent = 'Saving...';
+        btn.disabled = true;
+    }
+
+    try {
+        const response = await fetch('/submit_context', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(getContextData())
+        });
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok && result && result.status === 'success') {
+            if (btn) {
+                btn.textContent = 'Applied!';
+                btn.style.backgroundColor = '#00c851';
+            }
+        } else {
+            const errMsg = (result && (result.error || result.message)) || ('HTTP ' + response.status);
+            alert('Failed to save context: ' + errMsg);
+            if (btn) btn.textContent = originalText || 'Apply / Update';
+        }
+    } catch (error) {
+        console.error('Context save error:', error);
+        alert('Failed to save context: ' + error.message);
+        if (btn) btn.textContent = originalText || 'Apply / Update';
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            setTimeout(() => {
+                btn.textContent = originalText || 'Apply / Update';
+                btn.style.backgroundColor = '';
+            }, 2000);
+        }
+    }
 }
 
 // Update session metrics in sidebar
@@ -195,21 +224,27 @@ async function uploadFile(file) {
     });
 
     try {
-        const response = await fetch('/upload', {
+        const response = await fetch('/analyze', {
             method: 'POST',
             body: formData
         });
         
         const result = await response.json();
         
-        if (result.success) {
-            analysisResults = result;
+        if (result && result.status === 'success') {
+            // Normalize to expected structure for UI
+            analysisResults = {
+                events_analyzed: result.events_count || 0,
+                issues_found: result.issues_found || 0,
+                files_processed: 1,
+                raw: result
+            };
             currentStep = 2;
             updateProgressSteps();
             updateSessionMetrics();
-            showAnalysisResults(result);
+            showAnalysisResults(analysisResults);
         } else {
-            alert('Upload failed: ' + result.error);
+            alert('Upload failed: ' + (result && (result.error || result.message) || 'Unknown error'));
         }
     } catch (error) {
         console.error('Upload error:', error);
@@ -241,8 +276,13 @@ function showAnalysisResults(results) {
     const metricCards = document.getElementById('metric-cards');
     
     // Show metrics
-    if (results.metrics && metricCards) {
-        metricCards.innerHTML = Object.entries(results.metrics).map(([key, value]) => `
+    if (metricCards) {
+        const metrics = {
+            'Events Analyzed': results.events_analyzed || 0,
+            'Issues Found': results.issues_found || 0,
+            'Files Processed': results.files_processed || 1
+        };
+        metricCards.innerHTML = Object.entries(metrics).map(([key, value]) => `
             <div class="metric-card">
                 <div class="metric-value">${value}</div>
                 <div class="metric-label">${key}</div>
@@ -258,41 +298,19 @@ function showAnalysisResults(results) {
 }
 
 // Run ML Analysis
-async function runMLAnalysis(analysisType) {
+function runMLAnalysis(analysisType) {
     if (!analysisResults) {
         alert('No analysis results available. Please upload and analyze a file first.');
         return;
     }
-
-    try {
-        const response = await fetch('/ml_analysis', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                analysis_type: analysisType
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            const mlResults = document.getElementById('ml-results');
-            if (mlResults) {
-                mlResults.innerHTML = `
-                    <div class="info-card">
-                        <h4>${analysisType.toUpperCase()} Analysis Complete</h4>
-                        <p>${result.summary || 'Analysis completed successfully.'}</p>
-                    </div>
-                `;
-            }
-        } else {
-            alert('ML Analysis failed: ' + result.error);
-        }
-    } catch (error) {
-        console.error('ML Analysis error:', error);
-        alert('ML Analysis failed: ' + error.message);
+    const mlResults = document.getElementById('ml-results');
+    if (mlResults) {
+        mlResults.innerHTML = `
+            <div class="info-card">
+                <h4>${analysisType.toUpperCase()} Analysis</h4>
+                <p>ML analysis is not required for the native deployment. Core insights are available from the Python engine and AI reports.</p>
+            </div>
+        `;
     }
 }
 
@@ -319,12 +337,12 @@ async function generateReport(reportType) {
         
         const result = await response.json();
         
-        if (result.success) {
+        if (result && result.status === 'success') {
             showReportResults(result, reportType);
             currentStep = 4;
             updateProgressSteps();
         } else {
-            alert('Report generation failed: ' + result.error);
+            alert('Report generation failed: ' + (result && (result.error || result.message) || 'Unknown error'));
         }
     } catch (error) {
         console.error('Report generation error:', error);
@@ -340,11 +358,21 @@ function showReportResults(result, reportType) {
     
     let content = `<h3>${reportType.replace('_', ' ').toUpperCase()} Report Generated</h3>`;
     
-    if (result.ai_summary) {
+    const aiText = result.ai_analysis || result.ai_summary;
+    if (aiText) {
         content += `
             <div class="info-card">
                 <h4>AI Analysis Summary</h4>
-                <p>${result.ai_summary.replace(/\n/g, '<br>')}</p>
+                <p>${String(aiText).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+    
+    if (result.summary && !aiText) {
+        content += `
+            <div class="info-card">
+                <h4>Summary</h4>
+                <p>${String(result.summary).replace(/\n/g, '<br>')}</p>
             </div>
         `;
     }
