@@ -18,11 +18,12 @@ body {
     margin: 0 auto;
     padding: 2rem 1rem;
     min-height: 100vh;
+    display: block !important;
 }
 
 /* Hide sidebar for Streamlit-style layout */
 .sidebar {
-    display: none;
+    display: none !important;
 }
 
 .sidebar-header {
