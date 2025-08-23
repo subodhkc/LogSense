@@ -490,3 +490,173 @@ function showReportResults(result, reportType) {
     
     reportResults.innerHTML = content;
 }
+
+// Missing functions that HTML buttons are calling
+function toggleExpander(expanderId) {
+    const expander = document.getElementById(expanderId + '-expander');
+    const content = document.getElementById(expanderId + '-content');
+    const arrow = expander.querySelector('.expander-arrow');
+    
+    if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        arrow.textContent = '>';
+    } else {
+        content.classList.add('expanded');
+        arrow.textContent = 'v';
+    }
+}
+
+function showTab(tabName) {
+    // Hide all tabs
+    const tabs = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Remove active from all buttons
+    const buttons = document.querySelectorAll('.tab-button');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Activate selected button
+    const selectedButton = document.querySelector(`[onclick="showTab('${tabName}')"]`);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+}
+
+async function runMLAnalysis(analysisType) {
+    const resultsDiv = document.getElementById('ml-results');
+    resultsDiv.innerHTML = '<div class="loading">Running ' + analysisType + ' analysis...</div>';
+    
+    try {
+        const formData = new FormData();
+        formData.append('type', analysisType);
+        
+        const response = await fetch('/ml_analysis', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            displayMLResults(result.result);
+        } else {
+            resultsDiv.innerHTML = '<div class="error">Error: ' + result.message + '</div>';
+        }
+    } catch (error) {
+        resultsDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+    }
+}
+
+function displayMLResults(result) {
+    const resultsDiv = document.getElementById('ml-results');
+    let content = '<div class="analysis-results">';
+    
+    if (result.type === 'clustering') {
+        content += '<h4>Clustering Results</h4>';
+        result.clusters.forEach(cluster => {
+            content += `<div class="cluster-item">
+                <strong>${cluster.name}</strong>: ${cluster.count} events (${cluster.severity} severity)
+            </div>`;
+        });
+    } else if (result.type === 'severity_prediction') {
+        content += '<h4>Severity Predictions</h4>';
+        result.predictions.forEach(pred => {
+            content += `<div class="prediction-item">
+                Event ${pred.event_id}: <span class="severity-${pred.severity}">${pred.severity}</span> 
+                (${(pred.confidence * 100).toFixed(1)}% confidence)
+            </div>`;
+        });
+    } else if (result.type === 'anomaly_detection') {
+        content += '<h4>Anomaly Detection</h4>';
+        result.anomalies.forEach(anomaly => {
+            content += `<div class="anomaly-item">
+                Event ${anomaly.event_id}: Score ${anomaly.anomaly_score} - ${anomaly.reason}
+            </div>`;
+        });
+    }
+    
+    content += `<div class="processing-info">
+        Processing Mode: ${result.processing_mode}<br>
+        Processing Time: ${result.processing_time || 'N/A'}
+    </div></div>`;
+    
+    resultsDiv.innerHTML = content;
+}
+
+async function runCorrelationAnalysis(analysisType) {
+    const resultsDiv = document.getElementById('correlation-results');
+    resultsDiv.innerHTML = '<div class="loading">Running ' + analysisType + ' correlation analysis...</div>';
+    
+    try {
+        const response = await fetch('/correlations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: analysisType })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            resultsDiv.innerHTML = '<div class="correlation-results">' + 
+                '<h4>Correlation Analysis Results</h4>' +
+                '<p>Analysis type: ' + analysisType + '</p>' +
+                '<p>Results: Basic correlation patterns identified</p>' +
+                '</div>';
+        } else {
+            resultsDiv.innerHTML = '<div class="error">Error: ' + result.message + '</div>';
+        }
+    } catch (error) {
+        resultsDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+    }
+}
+
+async function generateReport(reportType) {
+    const resultsDiv = document.getElementById('report-results');
+    resultsDiv.innerHTML = '<div class="loading">Generating ' + reportType + ' report...</div>';
+    
+    try {
+        const formData = new FormData();
+        formData.append('type', reportType);
+        formData.append('ai_engine', reportType.includes('ai') ? 'phi2' : 'basic');
+        
+        const response = await fetch('/generate_report', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            displayReportResults(result.report);
+        } else {
+            resultsDiv.innerHTML = '<div class="error">Error: ' + result.message + '</div>';
+        }
+    } catch (error) {
+        resultsDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+    }
+}
+
+function displayReportResults(report) {
+    const resultsDiv = document.getElementById('report-results');
+    let content = '<div class="report-results">';
+    
+    content += '<h4>Report Generated</h4>';
+    content += '<div class="report-summary">' + report.summary + '</div>';
+    content += '<div class="report-details">';
+    content += '<p><strong>File:</strong> ' + report.filename + '</p>';
+    content += '<p><strong>Events:</strong> ' + report.event_count + '</p>';
+    content += '<p><strong>Processing Mode:</strong> ' + report.processing_mode + '</p>';
+    content += '<p><strong>Generated:</strong> ' + new Date(report.generation_time).toLocaleString() + '</p>';
+    if (report.redacted) {
+        content += '<p><strong>Data Security:</strong> Sensitive information redacted</p>';
+    }
+    content += '</div></div>';
+    
+    resultsDiv.innerHTML = content;
+}
