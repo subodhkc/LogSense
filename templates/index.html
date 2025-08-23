@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LogSense - Enterprise Log Analysis</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>LogSense</h1>
+            <h3>Enterprise Log Analysis Platform</h3>
+            <p>Intelligent diagnostics for system provisioning and deployment</p>
+            <p><strong>Session:</strong> <span id="sessionId"></span></p>
+        </div>
+        
+        <!-- Progress Indicator -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        
+        <!-- Sidebar for AI Engine Configuration -->
+        <div class="sidebar">
+            <h4>AI Engine Configuration</h4>
+            <label>
+                <input type="checkbox" id="useLocalLLM" checked>
+                <strong>Local LLM</strong> - In-house Phi-2 Model
+            </label>
+            <label>
+                <input type="checkbox" id="useCloudAI">
+                <strong>Cloud AI</strong> - OpenAI GPT Fallback
+            </label>
+            <label>
+                <input type="checkbox" id="usePythonEngine" checked>
+                <strong>Python Engine</strong> - Advanced Analytics
+            </label>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
+                Configure which analysis engines to use for reports
+            </div>
+            
+            <h4 style="margin-top: 20px;">Analysis Settings</h4>
+            <label>
+                <input type="checkbox" id="enableTemplates">
+                <strong>Templates</strong> - Pattern extraction
+            </label>
+            <label>
+                <input type="checkbox" id="enableMLInsights">
+                <strong>ML Insights</strong> - Clustering & anomalies
+            </label>
+            <label>
+                <input type="checkbox" id="enableCorrelations">
+                <strong>Correlations</strong> - Sequence detection
+            </label>
+        </div>
+        
+        <!-- User Context Form -->
+        <div class="form-section">
+            <h2>User & Test Information</h2>
+            <form id="contextForm">
+                <!-- User Information -->
+                <div class="expander">
+                    <div class="expander-header" onclick="toggleExpander(this)">
+                        <span><strong>User & Test Information</strong></span>
+                        <span class="expander-arrow">&gt;</span>
+                    </div>
+                    <div class="expander-content expanded">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="userName">Your Name *</label>
+                                <input type="text" id="userName" placeholder="Enter your full name" required>
+                                <small>This will appear in your final report</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="appName">Application Being Tested *</label>
+                                <input type="text" id="appName" placeholder="e.g., HP Power Manager" required>
+                                <small>Used to focus log filtering and reporting</small>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="appVersion">Application Version</label>
+                                <input type="text" id="appVersion" placeholder="e.g., v2.1.3 or Build 12345">
+                                <small>Version of the application being tested</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="testEnvironment">Test Environment</label>
+                                <select id="testEnvironment">
+                                    <option value="Production">Production</option>
+                                    <option value="Staging">Staging</option>
+                                    <option value="Development">Development</option>
+                                    <option value="QA">QA</option>
+                                    <option value="Pre-production">Pre-production</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <small>Environment where testing occurred</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Issue Description -->
+                <div class="expander">
+                    <div class="expander-header" onclick="toggleExpander(this)">
+                        <span><strong>Issue Description & Context</strong></span>
+                        <span class="expander-arrow">&gt;</span>
+                    </div>
+                    <div class="expander-content expanded">
+                        <div class="form-group">
+                            <label for="issueDescription">Describe the Issue *</label>
+                            <textarea id="issueDescription" placeholder="What problem are you experiencing? Be specific about symptoms, error messages, and impact." required></textarea>
+                            <small>Detailed description helps AI provide better root cause analysis</small>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="deploymentMethod">Deployment Method</label>
+                                <select id="deploymentMethod">
+                                    <option value="DASH Imaging">DASH Imaging</option>
+                                    <option value="SoftPaq Installation">SoftPaq Installation</option>
+                                    <option value="Manual Install">Manual Install</option>
+                                    <option value="Group Policy">Group Policy</option>
+                                    <option value="SCCM">SCCM</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="buildNumber">Build/Version Number</label>
+                                <input type="text" id="buildNumber" placeholder="e.g., 26000.1000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="buildChanges">Recent Changes</label>
+                                <textarea id="buildChanges" placeholder="Any recent updates, patches, or configuration changes"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="previousVersion">Previous Working Version</label>
+                                <input type="text" id="previousVersion" placeholder="Last known good version">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="expander">
+                    <div class="expander-header" onclick="toggleExpander(this)">
+                        <span><strong>Additional Information (Optional)</strong></span>
+                        <span class="expander-arrow">&gt;</span>
+                    </div>
+                    <div class="expander-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="hwModel">Hardware Model</label>
+                                <input type="text" id="hwModel" placeholder="e.g., HP EliteBook 840 G10">
+                            </div>
+                            <div class="form-group">
+                                <label for="osBuild">OS Build</label>
+                                <input type="text" id="osBuild" placeholder="e.g., Windows 11 26000.1000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="region">Region/Locale</label>
+                                <input type="text" id="region" placeholder="e.g., US, EMEA">
+                            </div>
+                            <div class="form-group">
+                                <label for="testRunId">Test Run ID</label>
+                                <input type="text" id="testRunId" placeholder="e.g., CI-12345 or Manual-2025-08-21">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="networkConstraints">Network Constraints</label>
+                                <input type="text" id="networkConstraints" placeholder="e.g., Proxy required, firewalled, offline">
+                            </div>
+                            <div class="form-group">
+                                <label for="proxyConfig">Proxy Config</label>
+                                <input type="text" id="proxyConfig" placeholder="e.g., http://proxy:8080">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="deviceSku">Device SKU</label>
+                                <input type="text" id="deviceSku" placeholder="Optional device SKU or platform code">
+                            </div>
+                            <div class="form-group">
+                                <label for="notesPrivate">Private Notes</label>
+                                <textarea id="notesPrivate" placeholder="Private notes (not shared)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Apply / Update Context</button>
+            </form>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="form-section" id="uploadSection" style="display: none;">
+            <h2>Log File Upload</h2>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-content">
+                    <div class="upload-icon">FILE</div>
+                    <p><strong>Upload Log Files (ZIP recommended)</strong></p>
+                    <p>Drag and drop your log file or ZIP archive here or click to browse</p>
+                    <small style="color: #666;">Supported formats: .log, .txt, .out, .zip</small>
+                    <input type="file" id="fileInput" accept=".log,.txt,.out,.zip" style="display: none;">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileInput').click()" style="margin-top: 15px;">Choose File</button>
+                </div>
+            </div>
+            <div class="file-info" id="fileInfo" style="display: none;"></div>
+            <button type="button" class="btn btn-primary" id="analyzeBtn" style="display: none;">Analyze Log File</button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" style="display: none;">
+            <div class="results">
+                <h2>Analysis Results</h2>
+                
+                <!-- Metric Cards -->
+                <div id="metricCards" class="metric-cards" style="display: none;"></div>
+                
+                <!-- Main Analysis Tabs -->
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('timeline')">Timeline & Issues</button>
+                    <button class="tab" onclick="showTab('templates')">Templates</button>
+                    <button class="tab" onclick="showTab('ml')">ML Insights</button>
+                    <button class="tab" onclick="showTab('correlations')">Correlations</button>
+                    <button class="tab" onclick="showTab('reports')">Reports</button>
+                </div>
+                
+                <!-- Timeline & Issues Tab -->
+                <div id="timelineTab" class="tab-content active">
+                    <h3>Timeline & Issues Analysis</h3>
+                    <div id="timelineResults"></div>
+                    <div id="issuesResults"></div>
+                </div>
+                
+                <!-- Templates Tab -->
+                <div id="templatesTab" class="tab-content">
+                    <h3>Templates (Structural Patterns)</h3>
+                    <div class="info">
+                        <strong>How to use:</strong> High-frequency templates point to dominant behaviors or repeated errors. Compare top templates before/after a change, or filter by severity to isolate failure patterns.
+                    </div>
+                    <div id="templatesResults">
+                        <p>Enable Templates in sidebar and rerun analysis to see structural patterns.</p>
+                    </div>
+                </div>
+                
+                <!-- ML Insights Tab -->
+                <div id="mlTab" class="tab-content">
+                    <h3>Machine Learning Insights</h3>
+                    <div class="info">
+                        <strong>ML Analysis:</strong> Use machine learning to uncover hidden patterns: clustering, anomaly detection, and severity prediction.
+                    </div>
+                    <div style="display: flex; gap: 15px; margin: 20px 0;">
+                        <button class="btn btn-secondary" onclick="runClustering()">Run Clustering</button>
+                        <button class="btn btn-secondary" onclick="runSeverityPrediction()">Severity Prediction</button>
+                        <button class="btn btn-secondary" onclick="runAnomalyDetection()">Anomaly Detection</button>
+                    </div>
+                    <div id="mlResults">
+                        <p>Click buttons above to run ML analysis on your log data.</p>
+                    </div>
+                </div>
+                
+                <!-- Correlations Tab -->
+                <div id="correlationsTab" class="tab-content">
+                    <h3>Correlations (Sequences & Sessions)</h3>
+                    <div class="info">
+                        <strong>How to use:</strong> Sequence hits suggest causal chains (e.g., warnings escalating to errors). Sessions help quantify operation durations and incomplete runs.
+                    </div>
+                    <div id="correlationsResults">
+                        <p>Enable Correlations in sidebar and rerun analysis to see sequence patterns.</p>
+                    </div>
+                </div>
+                
+                <!-- Reports Tab -->
+                <div id="reportsTab" class="tab-content">
+                    <h3>Generate Reports</h3>
+                    <div class="info">
+                        <strong>Report Contents:</strong><br>
+                        • System info and metadata<br>
+                        • Errors, timeline, and validations<br>
+                        • RCA summary (optional AI)<br>
+                        • Charts and insights
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary" id="standardReport">📄 Standard Report</button>
+                        <button type="button" class="btn btn-success" id="localAIReport">🤖 Local AI Report</button>
+                        <button type="button" class="btn btn-primary" id="cloudAIReport">☁️ Cloud AI Report</button>
+                    </div>
+                    <div id="reportResults" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

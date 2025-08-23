@@ -149,33 +149,33 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
                     import threading
                     import time
                     
-                    result_container = {"result": None, "error": None}
+                    result_container = {"result": None, "error": None, "completed": False}
                     
                     def load_and_run():
                         try:
                             from modules.phi2_inference import phi2_summarize
                             logger.info("Using Phi-2 model for offline analysis...")
                             result_container["result"] = phi2_summarize(prompt, max_tokens=300)
+                            result_container["completed"] = True
                         except Exception as e:
                             result_container["error"] = str(e)
+                            result_container["completed"] = True
                     
                     # Run with timeout using threading
                     thread = threading.Thread(target=load_and_run)
                     thread.daemon = True
                     thread.start()
-                    thread.join(timeout=30)  # 30 second timeout
+                    thread.join(timeout=45)  # Increased to 45 seconds for model loading
                     
-                    if thread.is_alive():
-                        logger.warning("Phi-2 model loading timed out after 30 seconds")
-                        raise TimeoutError("Model loading timed out")
-                    
-                    if result_container["error"]:
-                        raise Exception(result_container["error"])
-                    
-                    result = result_container["result"]
-                    if result and len(result.strip()) > 10:
+                    if not result_container["completed"]:
+                        logger.warning("Phi-2 model loading timed out after 45 seconds, falling back to cloud AI")
+                        # Don't raise error, just fall through to cloud AI
+                    elif result_container["error"]:
+                        logger.warning(f"Phi-2 model failed: {result_container['error']}, falling back to cloud AI")
+                        # Don't raise error, just fall through to cloud AI
+                    elif result_container["result"] and len(result_container["result"].strip()) > 10:
                         logger.info("Phi-2 analysis completed successfully")
-                        return result.strip()
+                        return result_container["result"].strip()
                     else:
                         logger.warning("Phi-2 returned empty or very short result")
                         

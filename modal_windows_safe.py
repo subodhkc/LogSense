@@ -1,80 +1,104 @@
-# serve_minimal_test.py - Local development server for testing enterprise UI
-from fastapi import FastAPI, File, UploadFile, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
-import tempfile
-import json
-import zipfile
-import re
-from datetime import datetime
-import uvicorn
+# modal_windows_safe.py - Windows encoding safe Modal deployment
+import modal
 
-app = FastAPI(title="LogSense Enterprise - Local Test", version="2.0.0")
+APP_NAME = "logsense-enterprise-safe"
 
-# Global storage
-user_context = {}
-analysis_cache = {}
+# Minimal dependencies to avoid encoding issues
+image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .pip_install([
+        "fastapi",
+        "jinja2", 
+        "python-multipart",
+        "uvicorn"
+    ])
+)
 
-# Helper functions
-def extract_timestamp(line: str):
-    patterns = [
-        r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
-        r'\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}',
-        r'\d{2}:\d{2}:\d{2}'
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, line)
-        if match:
-            return match.group()
-    return None
+app = modal.App(name=APP_NAME, image=image)
 
-def extract_log_level(line: str):
-    line_upper = line.upper()
-    levels = ['ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'TRACE']
-    for level in levels:
-        if level in line_upper:
-            return level
-    return 'INFO'
-
-def parse_log_content(content: str, filename: str):
-    events = []
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if line.strip():
-            event = {
-                "line_number": i + 1,
-                "content": line.strip(),
-                "filename": filename,
-                "timestamp": extract_timestamp(line),
-                "level": extract_log_level(line),
-                "message": line.strip()
-            }
-            events.append(event)
-    return events
-
-def analyze_events(events):
-    issues = []
-    error_count = 0
-    warning_count = 0
-    for event in events:
-        level = event.get('level', '').upper()
-        if 'ERROR' in level:
-            error_count += 1
-            issues.append({
-                "type": "Error",
-                "description": event.get('message', ''),
-                "line": event.get('line_number', 0)
-            })
-        elif 'WARN' in level:
-            warning_count += 1
-    return {
-        "issues": issues[:20],
-        "critical_errors": error_count,
-        "warnings": warning_count,
-        "summary": f"Found {error_count} errors and {warning_count} warnings in {len(events)} events"
-    }
-
-# Enterprise UI HTML template
-ENTERPRISE_HTML = '''<!DOCTYPE html>
+@app.function(
+    timeout=120,
+    memory=1024,
+    min_containers=1
+)
+@modal.asgi_app()
+def safe_app():
+    from fastapi import FastAPI, File, UploadFile, Request, Form
+    from fastapi.responses import HTMLResponse, JSONResponse
+    import tempfile
+    import json
+    import zipfile
+    import re
+    from datetime import datetime
+    
+    # Create FastAPI instance
+    web_app = FastAPI(title="LogSense Enterprise", version="2.0.0")
+    
+    # Global storage
+    user_context = {}
+    analysis_cache = {}
+    
+    # Helper functions
+    def extract_timestamp(line: str):
+        patterns = [
+            r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
+            r'\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}',
+            r'\d{2}:\d{2}:\d{2}'
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, line)
+            if match:
+                return match.group()
+        return None
+    
+    def extract_log_level(line: str):
+        line_upper = line.upper()
+        levels = ['ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'TRACE']
+        for level in levels:
+            if level in line_upper:
+                return level
+        return 'INFO'
+    
+    def parse_log_content(content: str, filename: str):
+        events = []
+        lines = content.split('\n')
+        for i, line in enumerate(lines):
+            if line.strip():
+                event = {
+                    "line_number": i + 1,
+                    "content": line.strip(),
+                    "filename": filename,
+                    "timestamp": extract_timestamp(line),
+                    "level": extract_log_level(line),
+                    "message": line.strip()
+                }
+                events.append(event)
+        return events
+    
+    def analyze_events(events):
+        issues = []
+        error_count = 0
+        warning_count = 0
+        for event in events:
+            level = event.get('level', '').upper()
+            if 'ERROR' in level:
+                error_count += 1
+                issues.append({
+                    "type": "Error",
+                    "description": event.get('message', ''),
+                    "line": event.get('line_number', 0)
+                })
+            elif 'WARN' in level:
+                warning_count += 1
+        return {
+            "issues": issues[:20],
+            "critical_errors": error_count,
+            "warnings": warning_count,
+            "summary": f"Found {error_count} errors and {warning_count} warnings in {len(events)} events"
+        }
+    
+    # Enterprise UI HTML template with Windows-safe characters only
+    ENTERPRISE_HTML = '''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -453,76 +477,73 @@ ENTERPRISE_HTML = '''<!DOCTYPE html>
     </script>
 </body>
 </html>'''
-
-@app.get("/", response_class=HTMLResponse)
-async def home():
-    return HTMLResponse(content=ENTERPRISE_HTML)
-
-@app.post("/submit_context")
-async def submit_context(request: Request):
-    try:
-        form_data = await request.form()
-        user_context.update({
-            "user_name": form_data.get("userName", ""),
-            "app_name": form_data.get("appName", ""),
-            "issue_description": form_data.get("issueDescription", ""),
-            "timestamp": datetime.now().isoformat()
-        })
-        return JSONResponse({"status": "success", "message": "Context saved"})
-    except Exception as e:
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
-@app.post("/analyze")
-async def analyze_logs(file: UploadFile = File(...)):
-    try:
-        content = await file.read()
-        
-        if file.filename.endswith('.zip'):
-            with tempfile.NamedTemporaryFile() as temp_file:
-                temp_file.write(content)
-                temp_file.flush()
-                
-                events = []
-                with zipfile.ZipFile(temp_file.name, 'r') as zip_ref:
-                    for file_info in zip_ref.filelist:
-                        if not file_info.is_dir() and file_info.filename.endswith(('.log', '.txt', '.out')):
-                            file_content = zip_ref.read(file_info.filename).decode('utf-8', errors='ignore')
-                            file_events = parse_log_content(file_content, file_info.filename)
-                            events.extend(file_events)
-        else:
-            text_content = content.decode('utf-8', errors='ignore')
-            events = parse_log_content(text_content, file.filename)
-        
-        analysis_result = analyze_events(events)
-        analysis_cache['events'] = events[:100]
-        analysis_cache['analysis'] = analysis_result
-        
+    
+    @web_app.get("/", response_class=HTMLResponse)
+    async def home():
+        return HTMLResponse(content=ENTERPRISE_HTML)
+    
+    @web_app.post("/submit_context")
+    async def submit_context(request: Request):
+        try:
+            form_data = await request.form()
+            user_context.update({
+                "user_name": form_data.get("userName", ""),
+                "app_name": form_data.get("appName", ""),
+                "issue_description": form_data.get("issueDescription", ""),
+                "timestamp": datetime.now().isoformat()
+            })
+            return JSONResponse({"status": "success", "message": "Context saved"})
+        except Exception as e:
+            return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+    
+    @web_app.post("/analyze")
+    async def analyze_logs(file: UploadFile = File(...)):
+        try:
+            content = await file.read()
+            
+            if file.filename.endswith('.zip'):
+                with tempfile.NamedTemporaryFile() as temp_file:
+                    temp_file.write(content)
+                    temp_file.flush()
+                    
+                    events = []
+                    with zipfile.ZipFile(temp_file.name, 'r') as zip_ref:
+                        for file_info in zip_ref.filelist:
+                            if not file_info.is_dir() and file_info.filename.endswith(('.log', '.txt', '.out')):
+                                file_content = zip_ref.read(file_info.filename).decode('utf-8', errors='ignore')
+                                file_events = parse_log_content(file_content, file_info.filename)
+                                events.extend(file_events)
+            else:
+                text_content = content.decode('utf-8', errors='ignore')
+                events = parse_log_content(text_content, file.filename)
+            
+            analysis_result = analyze_events(events)
+            analysis_cache['events'] = events[:100]
+            analysis_cache['analysis'] = analysis_result
+            
+            return JSONResponse({
+                "status": "success",
+                "total_events": len(events),
+                "critical_errors": analysis_result["critical_errors"],
+                "warnings": analysis_result["warnings"],
+                "issues": analysis_result["issues"],
+                "summary": analysis_result["summary"]
+            })
+            
+        except Exception as e:
+            return JSONResponse({"status": "error", "message": f"Analysis failed: {str(e)}"}, status_code=500)
+    
+    @web_app.get("/health")
+    async def health_check():
         return JSONResponse({
-            "status": "success",
-            "total_events": len(events),
-            "critical_errors": analysis_result["critical_errors"],
-            "warnings": analysis_result["warnings"],
-            "issues": analysis_result["issues"],
-            "summary": analysis_result["summary"]
+            "status": "healthy",
+            "service": "LogSense Enterprise",
+            "version": "2.0.0",
+            "features": {
+                "enterprise_ui": True,
+                "log_analysis": True,
+                "windows_compatible": True
+            }
         })
-        
-    except Exception as e:
-        return JSONResponse({"status": "error", "message": f"Analysis failed: {str(e)}"}, status_code=500)
-
-@app.get("/health")
-async def health_check():
-    return JSONResponse({
-        "status": "healthy",
-        "service": "LogSense Enterprise - Local Test",
-        "version": "2.0.0",
-        "features": {
-            "enterprise_ui": True,
-            "log_analysis": True,
-            "windows_compatible": True
-        }
-    })
-
-if __name__ == "__main__":
-    print("Starting LogSense Enterprise Local Server...")
-    print("Access the application at: http://localhost:8000")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    
+    return web_app
