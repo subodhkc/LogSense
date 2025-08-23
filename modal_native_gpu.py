@@ -18,7 +18,7 @@ app = modal.App(name=APP_NAME, image=image)
 # Maximum economical deployment - scales to zero immediately when idle
 @app.function(
     timeout=300,  # 5 minute timeout
-    memory=1024,  # Reduced to 1GB memory for maximum cost savings
+    memory=2048,  # 2GB memory for stability
     min_containers=0,  # Scale to zero when idle - MAXIMUM ECONOMICAL
     scaledown_window=60,  # Scale down after just 1 minute idle
 )
@@ -63,7 +63,7 @@ def economical_app():
             "deployment": "maximum-economical",
             "auto_scaling": "enabled",
             "idle_timeout": "1 minute",
-            "memory": "1GB",
+            "memory": "2GB",
             "timestamp": datetime.now().isoformat()
         }
     
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     print("LogSense Maximum Economical Deployment")
     print("Features:")
     print("- CPU only: Scales to zero after 1min idle (maximum savings)")
-    print("- Memory: 1GB (minimal cost)")
+    print("- Memory: 2GB (stable performance)")
     print("- Streamlit UI replica with full functionality")
     print("- Redaction: Automatic sensitive data masking")
     print("- Basic analysis: No AI characters or expensive models")
