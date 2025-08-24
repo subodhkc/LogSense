@@ -9,8 +9,9 @@
 - Security: Fixes CVE-2024-24762 (affects <0.0.7).
 - Verified: pip-audit shows 0 high/critical vulnerabilities.
 
-**Torch**: Vulnerability found in 2.7.1 (GHSA-887c-mr87-cxwp).
-- Pinned to secure version 2.4.1.
+**Torch**: Multiple vulnerabilities found in older versions.
+- Updated to torch>=2.6.0 to address CVE-2025-32434 (transformers requirement).
+- Previous pin 2.4.1 was insufficient for latest transformers compatibility.
 
 **Uvicorn, Starlette, FastAPI**:
 - Aligned versions to remove resolver conflicts (fastapi 0.116.x, starlette 0.46.0, uvicorn 0.30.6).
