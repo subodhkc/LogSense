@@ -9,7 +9,7 @@
 import modal
 from typing import Dict, Any
 
-app = modal.App("logsense-async-async-app")
+app = modal.App("logsense-async-v2")
 
 # Minimal, pinned web image for FastAPI-only server
 web_image = (
