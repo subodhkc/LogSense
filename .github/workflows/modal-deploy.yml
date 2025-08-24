@@ -119,7 +119,7 @@ jobs:
       - name: Sanity check (production)
         if: success() && (!env.REQUIRE_DEPLOY_TAG || contains(github.event.head_commit.message, env.DEPLOY_TAG))
         env:
-          BASE_URL: https://haiec--logsense-async-async-app.modal.run
+          BASE_URL: https://haiec--logsense-economical-economical-app.modal.run
         run: |
           set -euo pipefail
           sleep 15 # Wait for app to be available
