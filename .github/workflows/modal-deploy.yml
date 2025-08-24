@@ -38,9 +38,15 @@ jobs:
 
       - name: Deploy async app to Modal
         run: |
+          set -euo pipefail
           echo "Authenticating with Modal..."
-          modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
+          # Sanitize secrets to remove CR/LF that can break CLI metadata parsing
+          MODAL_TOKEN_ID_CLEAN=$(printf '%s' "$MODAL_TOKEN_ID" | tr -d '\r\n')
+          MODAL_TOKEN_SECRET_CLEAN=$(printf '%s' "$MODAL_TOKEN_SECRET" | tr -d '\r\n')
+          modal token set --token-id "$MODAL_TOKEN_ID_CLEAN" --token-secret "$MODAL_TOKEN_SECRET_CLEAN"
           echo "Setting profile to haiec..."
           modal profile activate haiec
+          echo "Active profiles:"
+          modal profile list || true
           echo "Starting deployment..."
           modal deploy modal_deploy_async.py
