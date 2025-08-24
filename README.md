@@ -56,6 +56,7 @@ LogSense is a comprehensive log analysis platform that combines traditional anal
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
 - CORS allowlist (no wildcard origins)
 - Request size limits (25MB uploads, 1MB JSON)
+- **Multipart form support**: Uses `python-multipart==0.0.20` for secure file upload handling
 
 #### Data Handling and Compliance
 **Input Processing**

@@ -23,6 +23,6 @@ bandit>=1.7.0
 cyclonedx-bom>=7.0.0
 
 # Web framework for testing
-python-multipart==0.0.9
+python-multipart==0.0.20
 streamlit>=1.28.0
 isort>=5.12.0
