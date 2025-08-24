@@ -179,6 +179,9 @@ async function applyContext() {
                 btn.textContent = 'Applied!';
                 btn.style.backgroundColor = '#00c851';
             }
+            // Progress to next step after successful context save
+            currentStep = 1;
+            updateProgressSteps();
         } else {
             const errMsg = (result && (result.error || result.message)) || ('HTTP ' + response.status);
             alert('Failed to save context: ' + errMsg);
