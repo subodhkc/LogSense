@@ -50,7 +50,16 @@ jobs:
           modal profile activate haiec
           echo "Active profiles:"
           modal profile list || true
-          echo "ENTRY=modal_native.py"
-          test -f modal_native.py && echo "FOUND modal_native.py"
+          echo "ENTRY=modal_deploy_async.py"
+          git rev-parse HEAD
+          test -f modal_deploy_async.py && echo "FOUND modal_deploy_async.py"
+          echo "Checking single ASGI export..."
+          python - << 'PY'
+          import re, sys, pathlib
+          p = pathlib.Path("modal_deploy_async.py").read_text()
+          n = len(re.findall(r"@modal\.asgi_app\(", p))
+          print("ASGI_EXPORTS_IN_ENTRY=", n)
+          sys.exit(0 if n==1 else 1)
+          PY
           echo "Starting deployment of canonical entry..."
-          modal deploy modal_native.py
+          modal deploy modal_deploy_async.py

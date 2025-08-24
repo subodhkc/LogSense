@@ -1,57 +1,48 @@
-# modal_deploy_async.py — canonical web entry for the endpoint at
-# https://haiec--logsense-async-async-app.modal.run/
-
+# modal_deploy_async.py — canonical web entry for https://haiec--logsense-async-async-app.modal.run/
 import modal
 
-# Keep the app name so the URL stays identical: ...-logsense-async-async-app
-app = modal.App("logsense-async")
+app = modal.App("logsense-async")  # keep app name; keep URL domain stable
 
-# Minimal pinned web image that DEFINITELY contains FastAPI
+# Minimal pinned web image that DEFINITELY includes FastAPI stack
 web_image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "fastapi==0.115.*",
-        "starlette==0.38.*",
-        "uvicorn==0.30.*",
-        "pydantic==2.*",
+        "fastapi==0.115.2",
+        "starlette==0.38.3",
+        "uvicorn==0.30.6",
+        "pydantic==2.8.2",
         "python-multipart==0.0.9",
-        "jinja2==3.1.*",
-        "aiofiles==24.1.0",
+        "jinja2==3.1.4",
+        "aiofiles==24.1.0"
     )
 )
 
-# IMPORTANT:
-#  - Name the function "async-app" to match the URL segment you are hitting.
-#  - Bind it explicitly to web_image.
+BUILD_CANARY = "ASGI_FIX_2025-08-24T13:45:00Z"  # unique marker to prove deploy
+
+# Bind the exact endpoint you're hitting: function name must be "async-app"
 @app.function(image=web_image, name="async-app")
 @modal.asgi_app()
 def async_app():
-    # Runtime probe BEFORE importing fastapi — proves image contents
+    # Canary + probe BEFORE importing fastapi (must print on every cold start)
     import os, sys, pkgutil, platform
     print(
-        f"[RUNTIME_PROBE] app='logsense-async' func='async-app' "
+        f"[CANARY] {BUILD_CANARY} app='logsense-async' func='async-app' "
         f"py={platform.python_version()} "
         f"fastapi_present={pkgutil.find_loader('fastapi') is not None} "
         f"pid={os.getpid()}"
     )
 
-    # Now import FastAPI. If it fails, dump pip freeze head to the logs and re-raise.
     try:
         from fastapi import FastAPI
         import starlette, pydantic, uvicorn
         print(
-            f"[VERSIONS] fastapi>ok "
-            f"pydantic={pydantic.__version__} "
-            f"uvicorn={uvicorn.__version__} "
-            f"starlette={starlette.__version__}"
+            f"[VERSIONS] fastapi>ok pydantic={pydantic.__version__} "
+            f"uvicorn={uvicorn.__version__} starlette={starlette.__version__}"
         )
     except Exception as e:
         print(f"[FASTAPI_IMPORT_FAIL] {e!r}")
         import subprocess
-        out = subprocess.run(
-            [sys.executable, "-m", "pip", "freeze"],
-            capture_output=True, text=True, check=False
-        ).stdout
+        out = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True).stdout
         print("[PIP_FREEZE_HEAD]\n" + out[:2000])
         raise
 
@@ -59,12 +50,11 @@ def async_app():
 
     @api.get("/health")
     async def health():
-        return {"status": "ok", "service": "haiec", "version": "1.0.0"}
+        return {"status": "ok", "service": "haiec", "version": "1.0.0", "canary": BUILD_CANARY}
 
     return api
 
-# Retire any other ASGI exports in THIS file to avoid graph conflicts.
-# Keep them for reference only under a dead branch.
+# Retire ALL other ASGI exports in THIS file to avoid graph conflicts
 if False:
     @app.function()
     @modal.asgi_app()
