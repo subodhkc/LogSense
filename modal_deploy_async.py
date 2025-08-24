@@ -25,7 +25,8 @@ image = (
     .env({
         "MODEL_BACKEND": "phi2",
         "DISABLE_ML_MODELS": "false",
-        "PYTHONPATH": "/root/app"
+        "PYTHONPATH": "/root/app",
+        "APP_REV": os.environ.get("GITHUB_SHA", "local")
     })
 )
 
@@ -47,6 +48,21 @@ def async_app():
     import traceback
     import tempfile
     
+    # Ensure FastAPI stack is available even if image cache missed installation
+    try:
+        import fastapi  # type: ignore
+    except Exception:
+        import subprocess
+        subprocess.check_call([
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "fastapi[standard]==0.116.1",
+            "uvicorn==0.30.6",
+            "python-multipart==0.0.20",
+        ])
+
     # Import async dependencies within Modal function
     import aiofiles
     import httpx

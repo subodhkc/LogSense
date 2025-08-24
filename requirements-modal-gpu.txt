@@ -1,5 +1,5 @@
 # Modal deployment requirements - GPU functions only
--c constraints.txt
+-c /root/app/constraints.txt
 modal>=0.63.0
 torch>=2.6.0
 torch-audio>=2.0.0,<2.5.0
