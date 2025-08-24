@@ -8,16 +8,23 @@ from typing import Dict, Any
 APP_NAME = "logsense-async"
 PORT = 8000
 
-# Create Modal image with async dependencies
+# Create Modal image with GPU support and LLM dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")
+    .pip_install_from_requirements("requirements.txt")  # Full requirements with torch/transformers
     .pip_install([
         "jinja2>=3.1.0",
         "aiofiles>=23.0.0", 
         "httpx>=0.24.0",
         "python-multipart>=0.0.6"
     ])
+    .env({
+        "STREAMLIT_BROWSER_GATHER_USAGE_STATS": "false",
+        "STREAMLIT_WATCHER_TYPE": "none",
+        "MODEL_BACKEND": "phi2",
+        "DISABLE_ML_MODELS": "false",
+        "PYTHONPATH": "/root/app"
+    })
     .add_local_dir(".", remote_path="/root/app")
 )
 
@@ -25,9 +32,12 @@ app = modal.App(name=APP_NAME, image=image)
 
 @app.function(
     timeout=900,
-    memory=2048,
-    min_containers=1,
-    scaledown_window=600
+    memory=4096,  # Increased for LLM model loading
+    gpu=modal.gpu.A10G(count=1),  # Single A10G GPU for LLM inference
+    min_containers=0,  # Scale to zero when idle
+    max_containers=2,  # Limit concurrent instances for cost control
+    scaledown_window=120,  # Aggressive 2-minute idle timeout
+    allow_concurrent_inputs=10
 )
 @modal.asgi_app()
 def async_app():
@@ -56,9 +66,70 @@ def async_app():
     web_app.mount("/static", StaticFiles(directory="/root/app/static"), name="static")
     templates = Jinja2Templates(directory="/root/app/templates")
     
-    # Global cache for analysis results
+    # Session cache for storing analysis results
     global_cache: Dict[str, Any] = {}
     session_cache: Dict[str, Any] = {}
+    
+    # GPU-optimized LLM functions
+    @web_app.on_event("startup")
+    async def load_llm_model():
+        """Load Phi-2 model on GPU at startup for faster inference."""
+        try:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            
+            if torch.cuda.is_available():
+                print("[GPU] Loading Phi-2 model on GPU...")
+                global phi2_model, phi2_tokenizer
+                phi2_model = AutoModelForCausalLM.from_pretrained(
+                    "microsoft/phi-2",
+                    torch_dtype=torch.float16,
+                    device_map="auto",
+                    trust_remote_code=True
+                )
+                phi2_tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2", trust_remote_code=True)
+                print("[GPU] Phi-2 model loaded successfully")
+            else:
+                print("[CPU] GPU not available, LLM will use CPU fallback")
+        except Exception as e:
+            print(f"[ERROR] Failed to load LLM model: {e}")
+    
+    async def _perform_gpu_llm_analysis(events, context):
+        """Perform LLM analysis using GPU-accelerated Phi-2 model."""
+        try:
+            if 'phi2_model' in globals() and 'phi2_tokenizer' in globals():
+                # Prepare prompt for analysis
+                event_summary = "\n".join([f"[{e.get('timestamp', 'N/A')}] {e.get('message', '')}" for e in events[:10]])
+                prompt = f"Analyze these log events and provide root cause analysis:\n{event_summary}\n\nAnalysis:"
+                
+                # GPU inference
+                inputs = phi2_tokenizer(prompt, return_tensors="pt", max_length=1024, truncation=True)
+                if torch.cuda.is_available():
+                    inputs = {k: v.cuda() for k, v in inputs.items()}
+                
+                with torch.no_grad():
+                    outputs = phi2_model.generate(
+                        **inputs,
+                        max_new_tokens=256,
+                        temperature=0.7,
+                        do_sample=True,
+                        pad_token_id=phi2_tokenizer.eos_token_id
+                    )
+                
+                response = phi2_tokenizer.decode(outputs[0], skip_special_tokens=True)
+                analysis = response.split("Analysis:")[-1].strip()
+                
+                return {
+                    "ai_analysis": analysis,
+                    "gpu_accelerated": True,
+                    "model": "phi-2",
+                    "processing_time": "GPU-optimized"
+                }
+            else:
+                return await _perform_basic_analysis(events)
+        except Exception as e:
+            print(f"[GPU] LLM analysis failed: {e}")
+            return await _perform_basic_analysis(events)
     
     @web_app.get("/", response_class=HTMLResponse)
     async def home(request: Request):

@@ -37,9 +37,8 @@ jobs:
           echo "Secrets are available"
 
       - name: Deploy async app to Modal
-        working-directory: ./
         run: |
-          echo "Setting up Modal authentication..."
+          echo "Authenticating with Modal..."
           modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
-          echo "Deploying to Modal..."
-          modal deploy modal_deploy_async.py --name logsense-async
+          echo "Starting deployment..."
+          modal deploy modal_deploy_async.py --profile subodhkc
