@@ -51,4 +51,4 @@ jobs:
           echo "Active profiles:"
           modal profile list || true
           echo "Starting deployment..."
-          modal deploy modal_deploy_async.py --name logsense-async-v2
+          modal deploy modal_native.py
