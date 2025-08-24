@@ -41,4 +41,4 @@ jobs:
           echo "Authenticating with Modal..."
           modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
           echo "Starting deployment..."
-          modal deploy modal_deploy_async.py --profile subodhkc
+          modal deploy modal_deploy_async.py
