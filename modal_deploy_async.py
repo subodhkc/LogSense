@@ -9,15 +9,17 @@ APP_NAME = "logsense-async"
 PORT = 8000
 
 # Create Modal image with GPU support and LLM dependencies
+# IMPORTANT: Add local directory first so that requirements and constraints files
+# are present before pip installs (needed for "-c constraints.txt").
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal-gpu.txt")
+    .add_local_dir(".", remote_path="/root/app")
+    .pip_install_from_requirements("/root/app/requirements-modal-gpu.txt")
     .env({
         "MODEL_BACKEND": "phi2",
         "DISABLE_ML_MODELS": "false",
         "PYTHONPATH": "/root/app"
     })
-    .add_local_dir(".", remote_path="/root/app")
 )
 
 app = modal.App(name=APP_NAME, image=image)
