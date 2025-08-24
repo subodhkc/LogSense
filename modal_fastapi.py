@@ -11,8 +11,7 @@ STREAMLIT_PORT = 8501  # Run Streamlit on different port
 # Build a lean image
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")
-    .pip_install("fastapi[standard]>=0.100.0", "requests")
+    .pip_install_from_requirements("requirements-modal.txt", find_links_args=["-c", "constraints.txt"])
     .add_local_dir(".", remote_path="/root/app")
 )
 

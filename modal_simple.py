@@ -7,11 +7,10 @@ APP_NAME = "logsense-simple"
 # Create image with only essential dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install("fastapi", "python-multipart", "openai", "python-dotenv", "pyyaml", "python-dateutil")
+    .pip_install_from_requirements("requirements-modal.txt", find_links_args=["-c", "constraints.txt"])
     .copy_local_file("ai_rca.py", "/root/ai_rca.py")
     .copy_local_file("analysis.py", "/root/analysis.py")
     .env({"PYTHONPATH": "/root"})
-    .pip_install_from_requirements("requirements-modal.txt")
     .add_local_dir(".", remote_path="/root/app")
 )
 

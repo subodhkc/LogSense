@@ -10,8 +10,7 @@ PORT = 8000
 # Build optimized image with proper requirements
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")  # Use lightweight requirements
-    .pip_install("fastapi[standard]>=0.100.0")
+    .pip_install_from_requirements("requirements-modal.txt", find_links_args=["-c", "constraints.txt"])
     .env({
         "STREAMLIT_WATCHER_TYPE": "none",
         "MODEL_BACKEND": "openai", 
