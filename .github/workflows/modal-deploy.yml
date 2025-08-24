@@ -29,6 +29,6 @@ jobs:
       - name: Install Modal CLI
         run: pip install --upgrade pip modal
 
-      - name: Deploy economical app to Modal
+      - name: Deploy async app to Modal
         working-directory: ./
-        run: modal deploy modal_native_gpu.py
+        run: modal deploy modal_deploy_async.py
