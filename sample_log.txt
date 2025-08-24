@@ -1,0 +1,3 @@
+2023-10-27 10:00:00,123 INFO: Application starting
+2023-10-27 10:00:01,456 ERROR: Failed to connect to database
+2023-10-27 10:00:02,789 WARNING: Disk space is running low

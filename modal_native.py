@@ -136,8 +136,15 @@ def economical_app():
 
                     os.unlink(temp_zip.name)
             else:
-                log_content = content.decode('utf-8', errors='ignore')
-                events = parse_log_file(log_content, safe_filename)
+                # Save content to a temporary file to pass its path to the parser
+                with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8', errors='ignore') as temp_log:
+                    temp_log.write(content.decode('utf-8', errors='ignore'))
+                    temp_log_path = temp_log.name
+
+                # Correctly call parse_log_file with the path
+                from analysis import parse_log_file
+                events = parse_log_file(temp_log_path)
+                os.unlink(temp_log_path)  # Clean up the temporary file
 
             # Sanitize events
             sanitized_events = []
