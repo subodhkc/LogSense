@@ -50,5 +50,5 @@ jobs:
           modal profile activate haiec
           echo "Active profiles:"
           modal profile list || true
-          echo "Starting deployment..."
+          echo "Starting deployment of modal_native.py..."
           modal deploy modal_native.py
