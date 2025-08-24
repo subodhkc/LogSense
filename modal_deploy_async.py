@@ -11,7 +11,7 @@ PORT = 8000
 # Create Modal image with GPU support and LLM dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal-gpu.txt", find_links_args=["-c", "constraints.txt"])
+    .pip_install_from_requirements("requirements-modal-gpu.txt")
     .env({
         "MODEL_BACKEND": "phi2",
         "DISABLE_ML_MODELS": "false",

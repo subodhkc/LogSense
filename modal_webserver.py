@@ -13,7 +13,7 @@ APP_NAME = "logsense-webserver"
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .env({"PYTHONIOENCODING": "utf-8", "LC_ALL": "C.UTF-8", "LANG": "C.UTF-8"})
-    .pip_install_from_requirements("requirements-modal.txt", find_links_args=["-c", "constraints.txt"])
+    .pip_install_from_requirements("requirements-modal.txt")
     .add_local_dir(".", remote_path="/root/app")
 )
 

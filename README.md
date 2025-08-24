@@ -98,7 +98,7 @@ LogSense is a comprehensive log analysis platform that combines traditional anal
 ```bash
 git clone <repository-url>
 cd LogSense
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 ```
 
 ### Quick Start
@@ -136,6 +136,25 @@ LogSense/
 - **Local**: Run on your desktop with `streamlit run skc_log_analyzer.py`
 - **Modal Cloud**: Deploy to Modal for team access with GPU acceleration
 - **Docker**: Containerized deployment for enterprise environments
+
+## Reproducible Build
+
+To ensure deterministic, secure builds across environments, this repo uses a top-level `constraints.txt` that freezes ALL dependencies (direct and transitive).
+
+- Install commands:
+  - `pip install -r requirements.txt -c constraints.txt`
+  - `pip install -r requirements-dev.txt -c constraints.txt`
+  - Modal images use `requirements-modal*.txt` which include `-c constraints.txt` internally.
+
+- Compliance and security:
+  - CI runs `pip-audit` and `bandit` on every push.
+  - Critical pins (examples): `python-multipart==0.0.20`, `uvicorn==0.30.6`, `starlette==0.46.0`.
+  - Heavy ML deps are constrained for known CVEs and compatibility (e.g., `torch==2.4.1`).
+
+- Reproducibility standard (HP review):
+  - Fully frozen transitive graph in `constraints.txt`.
+  - SBOM generated via CycloneDX.
+  - Modal deployments build from light `requirements-modal*.txt` for faster and reliable cold starts.
 
 ## AI Configuration
 

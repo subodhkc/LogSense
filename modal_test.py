@@ -3,7 +3,7 @@ import modal
 app = modal.App("logsense-test")
 
 # Minimal image to test encoding fix
-image = modal.Image.debian_slim(python_version="3.11").pip_install_from_requirements("requirements-modal.txt", find_links_args=["-c", "constraints.txt"])
+image = modal.Image.debian_slim(python_version="3.11").pip_install_from_requirements("requirements-modal.txt")
 
 @app.function(image=image)
 @modal.fastapi_endpoint(method="GET")
