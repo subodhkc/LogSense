@@ -1,0 +1,60 @@
+name: Deploy Modal Web V3
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy-v3:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: modal-deploy-v3
+      cancel-in-progress: false
+
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Modal CLI
+        run: pip install --upgrade pip modal
+
+      - name: Check secrets availability
+        run: |
+          echo "Checking if secrets are available..."
+          if [ -z "$MODAL_TOKEN_ID" ]; then echo "MODAL_TOKEN_ID is empty"; exit 1; fi
+          if [ -z "$MODAL_TOKEN_SECRET" ]; then echo "MODAL_TOKEN_SECRET is empty"; exit 1; fi
+          echo "Secrets are available"
+
+      - name: Preflight proof
+        run: |
+          echo "ENTRY=modal_web_v3.py"
+          git rev-parse HEAD
+          test -f modal_web_v3.py && echo "FOUND modal_web_v3.py"
+
+      - name: Preflight image check
+        run: |
+          set -euo pipefail
+          echo "Authenticating with Modal..."
+          MODAL_TOKEN_ID_CLEAN=$(printf '%s' "$MODAL_TOKEN_ID" | tr -d '\r\n')
+          MODAL_TOKEN_SECRET_CLEAN=$(printf '%s' "$MODAL_TOKEN_SECRET" | tr -d '\r\n')
+          modal token set --token-id "$MODAL_TOKEN_ID_CLEAN" --token-secret "$MODAL_TOKEN_SECRET_CLEAN"
+          unset MODAL_TOKEN_ID MODAL_TOKEN_SECRET || true
+          echo "Setting profile to haiec..."
+          modal profile activate haiec
+          echo "Testing diagnostic function..."
+          modal run modal_web_v3.py::web_diag
+
+      - name: Deploy Web V3 to Modal
+        run: |
+          echo "Starting deployment of modal_web_v3.py..."
+          modal deploy modal_web_v3.py
