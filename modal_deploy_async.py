@@ -16,11 +16,14 @@ web_image = (
         "jinja2==3.1.4",
         "aiofiles==24.1.0"
     )
-    .run_commands("echo 'CACHE_BUST_20250824_1710' > /tmp/cache_bust.txt")  # Force layer rebuild
+    .run_commands(
+        "echo 'FORCE_REBUILD_20250824_1716' > /tmp/rebuild.txt",
+        "pip install --no-cache-dir --force-reinstall fastapi==0.115.3 starlette==0.38.4"
+    )  # Force complete rebuild
     .add_local_dir(".", remote_path="/root/app")
 )
 
-ASYNC_CANARY = "ASYNC_REBUILD_20250824_1710_FASTAPI_0115_3"
+ASYNC_CANARY = "FORCE_REBUILD_20250824_1716_NO_CACHE"
 
 # Bind the exact endpoint you're hitting: function name must be "async-app"
 @app.function(image=web_image, name="async-app")
