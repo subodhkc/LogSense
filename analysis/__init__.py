@@ -8,7 +8,6 @@ from __future__ import annotations
 import os
 import re
 from datetime import datetime
-from types import SimpleNamespace
 
 try:
     # Prefer python-dateutil if available
@@ -51,7 +50,7 @@ def parse_logs(text: str, fname: str = "log.txt"):
             msg = line.strip()
             sev = _guess_severity(msg)
             events.append(
-                SimpleNamespace(timestamp=ts, component=component, message=msg, severity=sev)
+                {'timestamp': ts, 'component': component, 'message': msg, 'severity': sev}
             )
         except Exception:
             continue
