@@ -9,50 +9,70 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFileUpload();
     setupExpanders();
     setupTabs();
+    generateSessionId();
+    updateSidebarMetrics();
 });
 
-// Update progress indicator
+// Generate session ID
+function generateSessionId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let sessionId = 'LS-';
+    for (let i = 0; i < 8; i++) {
+        sessionId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('session-display').textContent = sessionId;
+}
+
+// Update sidebar metrics
+function updateSidebarMetrics() {
+    document.getElementById('files-processed').textContent = '0';
+    document.getElementById('events-analyzed').textContent = '0';
+    document.getElementById('issues-found').textContent = '0';
+}
+
+// Update progress indicator - Enterprise Style
 function updateProgressSteps() {
     const steps = document.querySelectorAll('.progress-step');
     steps.forEach((step, index) => {
-        step.classList.remove('active', 'completed');
-        const icon = step.querySelector('.step-icon');
+        step.classList.remove('active', 'completed', 'pending');
+        const status = step.querySelector('.step-status');
         
         if (index < currentStep) {
             step.classList.add('completed');
-            icon.textContent = 'DONE';
+            status.textContent = 'DONE';
         } else if (index === currentStep) {
             step.classList.add('active');
-            icon.textContent = 'ACTIVE';
+            status.textContent = 'ACTIVE';
         } else {
-            icon.textContent = 'PENDING';
+            step.classList.add('pending');
+            status.textContent = 'PENDING';
         }
     });
 }
 
-// Setup expander functionality
+// Setup expander functionality - Enterprise Style
 function setupExpanders() {
-    const expanders = document.querySelectorAll('.expander-header');
+    const expanders = document.querySelectorAll('.section-header');
     expanders.forEach(header => {
         header.addEventListener('click', function() {
-            const expanderId = this.parentElement.id.replace('-expander', '');
-            toggleExpander(expanderId);
+            const section = this.nextElementSibling;
+            const icon = this.querySelector('.expand-icon');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                section.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
         });
     });
 }
 
-// Toggle expander
+// Toggle expander - Deprecated, using new enterprise style
 function toggleExpander(expanderId) {
-    const content = document.getElementById(expanderId + '-content');
-    const arrow = document.querySelector(`#${expanderId}-expander .expander-arrow`);
-    
-    if (content.classList.contains('expanded')) {
-        content.classList.remove('expanded');
-        arrow.textContent = '>';
-    } else {
-        content.classList.add('expanded');
-        arrow.textContent = 'v';
-    }
+    // Legacy function kept for compatibility
+    console.log('Legacy expander function called for:', expanderId);
 }
 
 // Setup tabs functionality

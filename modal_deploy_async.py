@@ -11,12 +11,15 @@ PORT = 8000
 # Create Modal image with GPU support and LLM dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements.txt")  # Full requirements with torch/transformers
+    .pip_install_from_requirements("requirements-modal.txt")  # Use lightweight modal requirements
     .pip_install([
+        "fastapi>=0.104.0",
         "jinja2>=3.1.0",
         "aiofiles>=23.0.0", 
         "httpx>=0.24.0",
-        "python-multipart>=0.0.6"
+        "python-multipart>=0.0.6",
+        "torch>=2.0.0",
+        "transformers>=4.26.0"
     ])
     .env({
         "STREAMLIT_BROWSER_GATHER_USAGE_STATS": "false",
@@ -33,11 +36,9 @@ app = modal.App(name=APP_NAME, image=image)
 @app.function(
     timeout=900,
     memory=4096,  # Increased for LLM model loading
-    gpu=modal.gpu.A10G(count=1),  # Single A10G GPU for LLM inference
-    min_containers=0,  # Scale to zero when idle
-    max_containers=2,  # Limit concurrent instances for cost control
-    scaledown_window=120,  # Aggressive 2-minute idle timeout
-    allow_concurrent_inputs=10
+    gpu="A10G",  # Single A10G GPU for LLM inference
+    concurrency_limit=10,  # Updated parameter name
+    container_idle_timeout=120  # Aggressive 2-minute idle timeout
 )
 @modal.asgi_app()
 def async_app():

@@ -8,11 +8,12 @@
 </head>
 <body>
     <div class="main-container">
-        <!-- Sidebar - Hidden for Streamlit layout -->
-        <div class="sidebar" style="display: none !important;">
+        <!-- Sidebar - Enterprise Dashboard Layout -->
+        <div class="sidebar">
             <div class="sidebar-header">
-                <h3>LogSense</h3>
-                <p>Enterprise Log Analysis Platform</p>
+                <h2 class="logo-title">LogSense</h2>
+                <p class="logo-subtitle">Enterprise Log Analysis Platform</p>
+                <div class="session-id">Session: <span id="session-display">LS-MENXM4KM</span></div>
             </div>
             
             <!-- Engine Configuration -->
@@ -73,63 +74,61 @@
         
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Streamlit-style Header -->
-            <div class="streamlit-header">
-                <h1>🔍 LogSense - AI Log Analysis</h1>
-                <p>Enterprise Log Analysis Platform - Streamlit Style</p>
+            <!-- Enterprise Header -->
+            <div class="enterprise-header">
+                <h1 class="main-title">LogSense</h1>
+                <h2 class="main-subtitle">Enterprise Log Analysis Platform</h2>
+                <p class="main-description">Intelligent diagnostics for system provisioning and deployment</p>
             </div>
             
             <!-- Progress Indicator -->
             <div class="progress-indicator">
                 <div class="progress-step active" data-step="0">
-                    <div class="step-icon">DONE</div>
-                    <div class="step-label">Upload</div>
+                    <div class="step-status">ACTIVE</div>
+                    <div class="step-label">UPLOAD</div>
                 </div>
-                <div class="progress-step" data-step="1">
-                    <div class="step-icon">ACTIVE</div>
-                    <div class="step-label">Configure</div>
+                <div class="progress-step pending" data-step="1">
+                    <div class="step-status">PENDING</div>
+                    <div class="step-label">CONFIGURE</div>
                 </div>
-                <div class="progress-step" data-step="2">
-                    <div class="step-icon">PENDING</div>
-                    <div class="step-label">Analyze</div>
+                <div class="progress-step pending" data-step="2">
+                    <div class="step-status">PENDING</div>
+                    <div class="step-label">ANALYZE</div>
                 </div>
-                <div class="progress-step" data-step="3">
-                    <div class="step-icon">PENDING</div>
-                    <div class="step-label">Review</div>
+                <div class="progress-step pending" data-step="3">
+                    <div class="step-status">PENDING</div>
+                    <div class="step-label">REVIEW</div>
                 </div>
-                <div class="progress-step" data-step="4">
-                    <div class="step-icon">PENDING</div>
-                    <div class="step-label">Export</div>
+                <div class="progress-step pending" data-step="4">
+                    <div class="step-status">PENDING</div>
+                    <div class="step-label">EXPORT</div>
                 </div>
             </div>
             
-            <!-- Step 1: File Upload -->
+            <!-- File Upload Section -->
             <div class="content-section">
-                <div class="expander" id="upload-expander">
-                    <div class="expander-header" onclick="toggleExpander('upload')">
-                        <span>Log File Upload</span>
-                        <span class="expander-arrow">v</span>
+                <div class="section-header">
+                    <h3>Log File Upload</h3>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="upload-container">
+                    <div class="upload-area-large" onclick="document.getElementById('file-input').click()">
+                        <div class="upload-button">UPLOAD</div>
+                        <div class="upload-text">Upload Log Files (ZIP recommended)</div>
+                        <div class="upload-subtext">Upload a ZIP file containing multiple logs, or individual log files</div>
                     </div>
-                    <div class="expander-content expanded" id="upload-content">
-                        <div class="upload-area" onclick="document.getElementById('file-input').click()">
-                            <div class="upload-icon">UPLOAD</div>
-                            <div>Upload Log Files (ZIP recommended)</div>
-                            <div class="upload-hint">Upload a ZIP file containing multiple logs, or individual log files.</div>
-                        </div>
-                        <input type="file" id="file-input" accept=".zip,.txt,.log" style="display: none;">
-                        <div id="file-info" class="file-info" style="display: none;"></div>
-                    </div>
+                    <input type="file" id="file-input" accept=".zip,.txt,.log" style="display: none;">
+                    <div id="file-info" class="file-info" style="display: none;"></div>
                 </div>
             </div>
             
             <!-- User Context Form -->
             <div class="content-section">
-                <div class="expander" id="user-info-expander">
-                    <div class="expander-header" onclick="toggleExpander('user-info')">
-                        <span>User & Test Information</span>
-                        <span class="expander-arrow">v</span>
-                    </div>
-                    <div class="expander-content expanded" id="user-info-content">
+                <div class="section-header">
+                    <h3>User & Test Information</h3>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="form-container">
                         <form id="context-form">
                             <div class="form-row">
                                 <div class="form-group">
@@ -159,15 +158,13 @@
                                 </div>
                             </div>
                         </form>
-                    </div>
                 </div>
                 
-                <div class="expander" id="issue-desc-expander">
-                    <div class="expander-header" onclick="toggleExpander('issue-desc')">
-                        <span>Issue Description & Context</span>
-                        <span class="expander-arrow">v</span>
-                    </div>
-                    <div class="expander-content expanded" id="issue-desc-content">
+                <div class="section-header">
+                    <h3>Issue Description & Context</h3>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="form-container">
                         <div class="form-group">
                             <label for="issue-description">Describe the Issue</label>
                             <textarea id="issue-description" placeholder="What problem are you experiencing? Be specific about symptoms, error messages, and impact."></textarea>
@@ -199,10 +196,9 @@
                                 <input type="text" id="previous-version" placeholder="Last known good version">
                             </div>
                         </div>
-                    </div>
                 </div>
                 
-                <button type="button" class="btn btn-primary" onclick="applyContext()">Apply / Update</button>
+                <button type="button" class="btn btn-apply" onclick="applyContext()">Apply / Update</button>
             </div>
             
             <!-- Analysis Results -->
