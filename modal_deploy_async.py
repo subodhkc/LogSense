@@ -2,7 +2,7 @@
 import modal
 from datetime import datetime
 
-app = modal.App("logsense-economical")  # Corrected app name to match existing container
+app = modal.App("logsense-economical-disabled-async")  # Disabled to prevent conflict with GPU deployment
 
 # Minimal FastAPI-first image - install FastAPI FIRST and ONLY
 web_image = (

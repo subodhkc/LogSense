@@ -1,7 +1,7 @@
 # modal_native.py - Canonical Modal FastAPI entry point
 import modal
 
-app = modal.App("logsense-economical")  # Will deploy to haiec--logsense-economical-economical-app.modal.run
+app = modal.App("logsense-economical-disabled-native")  # Disabled to prevent conflict with GPU deployment
 
 # Minimal web image with explicit FastAPI pins
 web_image = (

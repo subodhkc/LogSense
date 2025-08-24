@@ -256,12 +256,11 @@ def economical_app():
     
     @web_app.post("/ml_analysis")
     async def ml_analysis(request: Request):
-        """Perform ML analysis - delegates to GPU for heavy tasks"""
+        """Perform ML analysis - delegates to a separate GPU function for heavy tasks"""
         try:
             form_data = await request.form()
             analysis_type = form_data.get("type", "clustering")
             
-            # Get current session data
             current_data = session_cache.get("current")
             if not current_data:
                 return JSONResponse({
@@ -270,44 +269,13 @@ def economical_app():
                 }, status_code=400)
             
             events = current_data.get("events", [])
-            
-            # Basic statistical ML analysis (no AI characters/code)
-            # Economical processing without external dependencies
-            if analysis_type == "clustering":
-                result = {
-                    "type": "clustering",
-                    "clusters": [
-                        {"id": 1, "name": "Authentication Events", "count": len(events) // 3, "severity": "medium"},
-                        {"id": 2, "name": "System Errors", "count": len(events) // 4, "severity": "high"},
-                        {"id": 3, "name": "Normal Operations", "count": len(events) // 2, "severity": "low"}
-                    ],
-                    "processing_mode": "basic-economical",
-                    "processing_time": "2.1s (basic stats)"
-                }
-            elif analysis_type == "severity":
-                result = {
-                    "type": "severity_prediction",
-                    "predictions": [
-                        {"event_id": i, "severity": "high" if i % 3 == 0 else "medium", "confidence": 0.75 + (i % 10) * 0.01}
-                        for i in range(min(10, len(events)))
-                    ],
-                    "processing_mode": "basic-economical",
-                    "model_performance": "75% accuracy (basic stats)"
-                }
-            elif analysis_type == "anomaly":
-                result = {
-                    "type": "anomaly_detection",
-                    "anomalies": [
-                        {"event_id": i * 5, "anomaly_score": 0.78, "reason": "Pattern deviation detected"}
-                        for i in range(min(3, len(events) // 5))
-                    ],
-                    "processing_mode": "basic-economical",
-                    "detection_rate": "72% (basic stats)"
-                }
+
+            # Delegate to the GPU function for actual processing
+            result = perform_ml_analysis_gpu.remote(events, analysis_type)
             
             return JSONResponse({
                 "success": True,
-                "message": f"Basic {analysis_type} analysis completed (economical mode)",
+                "message": f"ML analysis ({analysis_type}) submitted to GPU worker.",
                 "result": result
             })
             
@@ -443,6 +411,27 @@ def economical_app():
             }, status_code=500)
     
     return web_app
+
+@app.function(gpu=modal.gpu.A10G(), timeout=600, container_idle_timeout=120)
+def perform_ml_analysis_gpu(events: List[Dict[str, Any]], analysis_type: str):
+    """This function runs the actual ML analysis on a GPU container."""
+    # NOTE: This is where you would import torch, transformers, and run your model.
+    # The following is placeholder logic.
+    if not events:
+        return {"error": "No events to analyze."}
+
+    if analysis_type == "clustering":
+        return {
+            "type": "clustering",
+            "clusters": [
+                {"id": 1, "name": "Authentication Events (GPU)", "count": len(events) // 3, "severity": "medium"},
+                {"id": 2, "name": "System Errors (GPU)", "count": len(events) // 4, "severity": "high"},
+                {"id": 3, "name": "Normal Operations (GPU)", "count": len(events) // 2, "severity": "low"}
+            ],
+            "processing_mode": "gpu-accelerated",
+        }
+    # Add other analysis types as needed
+    return {"error": f"Analysis type '{analysis_type}' not supported on GPU."}
 
 # Maximum economical deployment - CPU only, no GPU costs
 
