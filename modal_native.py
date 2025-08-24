@@ -1,7 +1,7 @@
 # modal_native.py - Canonical Modal FastAPI entry point
 import modal
 
-app = modal.App("logsense-async")  # Will deploy to haiec--logsense-async-async-app.modal.run
+app = modal.App("logsense-economical")  # Will deploy to haiec--logsense-economical-economical-app.modal.run
 
 # Minimal web image with explicit FastAPI pins
 web_image = (
@@ -21,12 +21,12 @@ web_image = (
 # Global cache for analysis results (preserve existing functionality)
 analysis_cache = {}
 
-@app.function(image=web_image, name="async-app")
+@app.function(image=web_image, name="economical-app")
 @modal.asgi_app()
-def async_app():
+def economical_app():
     import os, sys, pkgutil, platform
     print(
-        f"[RUNTIME_PROBE] app='logsense-async' func='async-app' "
+        f"[RUNTIME_PROBE] app='logsense-economical' func='economical-app' "
         f"py={platform.python_version()} "
         f"fastapi_present={pkgutil.find_loader('fastapi') is not None} "
         f"pid={os.getpid()}"
