@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogSense - Enterprise Log Analysis Platform</title>
+    <link rel="stylesheet" href="/static/styles_purple.css">
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header with Purple Gradient -->
+        <div class="header-section">
+            <div class="header-content">
+                <h1>LogSense</h1>
+                <p class="subtitle">Enterprise Log Analysis Platform</p>
+                <p class="description">Intelligent diagnostics for system provisioning and deployment</p>
+                <p class="session-info">Session: <span id="session-id">LS-MENWT719</span></p>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="content-wrapper">
+            <!-- Left Content -->
+            <div class="main-content">
+                <!-- User & Test Information Section -->
+                <div class="form-card">
+                    <div class="form-header">
+                        <h2>User & Test Information</h2>
+                        <button class="expand-btn" onclick="toggleSection('user-info')">></button>
+                    </div>
+                    
+                    <div class="form-content" id="user-info">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="user-name">Your Name *</label>
+                                <input type="text" id="user-name" placeholder="Enter your full name">
+                                <small>This will appear in your final report</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="application-tested">Application Being Tested *</label>
+                                <input type="text" id="application-tested" placeholder="e.g., HP Power Manager">
+                                <small>Used to focus log filtering and reporting</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="app-version">Application Version</label>
+                                <input type="text" id="app-version" placeholder="e.g., v2.1.3 or Build 12345">
+                                <small>Version of the application being tested</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="test-environment">Test Environment</label>
+                                <select id="test-environment">
+                                    <option value="production">Production</option>
+                                    <option value="staging">Staging</option>
+                                    <option value="development">Development</option>
+                                    <option value="testing">Testing</option>
+                                </select>
+                                <small>Environment where testing occurred</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Upload Section -->
+                <div class="upload-section">
+                    <h2>Upload Log Files</h2>
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-icon">📁</div>
+                        <p>Drag and drop log files here or click to browse</p>
+                        <p class="upload-hint">Supports .log, .txt files and .zip archives</p>
+                        <input type="file" id="file-input" accept=".log,.txt,.zip" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Choose Files</button>
+                    </div>
+                    
+                    <div class="progress-container" id="progress-container" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-text" id="progress-text">Processing...</div>
+                    </div>
+                </div>
+
+                <!-- Analysis Results -->
+                <div class="analysis-section" id="analysis-section" style="display: none;">
+                    <h2>Analysis Results</h2>
+                    <div class="metric-cards" id="metric-cards"></div>
+                    
+                    <!-- Analysis Tabs -->
+                    <div class="analysis-tabs">
+                        <div class="tab-buttons">
+                            <button class="tab-button active" onclick="showAnalysisTab('events')">Events</button>
+                            <button class="tab-button" onclick="showAnalysisTab('templates')">Templates</button>
+                            <button class="tab-button" onclick="showAnalysisTab('ml')">ML Insights</button>
+                            <button class="tab-button" onclick="showAnalysisTab('correlations')">Correlations</button>
+                            <button class="tab-button" onclick="showAnalysisTab('reports')">Reports</button>
+                        </div>
+                        
+                        <div class="tab-content active" id="events-tab">
+                            <div class="events-container" id="events-container"></div>
+                        </div>
+                        
+                        <div class="tab-content" id="templates-tab">
+                            <div class="templates-controls">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="show-templates">
+                                    Show Templates (Structural Patterns)
+                                </label>
+                            </div>
+                            <div class="templates-container" id="templates-container"></div>
+                        </div>
+                        
+                        <div class="tab-content" id="ml-tab">
+                            <div class="ml-controls">
+                                <button class="btn btn-primary" onclick="runMLAnalysis('clustering')">Run Clustering</button>
+                                <button class="btn btn-primary" onclick="runMLAnalysis('severity')">Severity Prediction</button>
+                                <button class="btn btn-primary" onclick="runMLAnalysis('anomaly')">Anomaly Detection</button>
+                            </div>
+                            <div class="ml-results" id="ml-results"></div>
+                        </div>
+                        
+                        <div class="tab-content" id="correlations-tab">
+                            <div class="correlation-controls">
+                                <button class="btn btn-primary" onclick="runCorrelationAnalysis('temporal')">Temporal Correlations</button>
+                                <button class="btn btn-primary" onclick="runCorrelationAnalysis('causal')">Causal Chain Analysis</button>
+                            </div>
+                            <div class="correlation-results" id="correlation-results"></div>
+                        </div>
+                        
+                        <div class="tab-content" id="reports-tab">
+                            <div class="report-controls">
+                                <button class="btn btn-secondary" onclick="generateReport('standard')">Standard Report</button>
+                                <button class="btn btn-primary" onclick="generateReport('local_ai')">Local AI Report</button>
+                                <button class="btn btn-primary" onclick="generateReport('cloud_ai')">Cloud AI Report</button>
+                            </div>
+                            <div class="report-results" id="report-results"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Configuration Panel -->
+            <div class="config-sidebar">
+                <div class="config-card">
+                    <h3>AI Engine Configuration</h3>
+                    
+                    <div class="config-option">
+                        <label class="config-label">
+                            <input type="checkbox" id="use-local-llm" checked>
+                            <div class="config-info">
+                                <strong>Local LLM</strong>
+                                <span class="config-desc">In-house Phi-2 Model</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="config-option">
+                        <label class="config-label">
+                            <input type="checkbox" id="use-cloud-ai">
+                            <div class="config-info">
+                                <strong>Cloud AI</strong>
+                                <span class="config-desc">OpenAI GPT Fallback</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="config-option">
+                        <label class="config-label">
+                            <input type="checkbox" id="use-python-engine" checked>
+                            <div class="config-info">
+                                <strong>Python Engine</strong>
+                                <span class="config-desc">Advanced Analytics</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <p class="config-note">Configure which analysis engines to use for reports.</p>
+                </div>
+
+                <div class="config-card">
+                    <h3>Analysis Settings</h3>
+                    
+                    <div class="config-option">
+                        <label class="config-label">
+                            <input type="checkbox" id="enable-templates">
+                            <div class="config-info">
+                                <strong>Templates</strong>
+                                <span class="config-desc">Pattern extraction</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="config-option">
+                        <label class="config-label">
+                            <input type="checkbox" id="enable-ml">
+                            <div class="config-info">
+                                <strong>ML Insights</strong>
+                                <span class="config-desc">Clustering & anomalies</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="config-option">
+                        <label class="config-label">
+                            <input type="checkbox" id="enable-correlations">
+                            <div class="config-info">
+                                <strong>Correlations</strong>
+                                <span class="config-desc">Sequence detection</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Session Metrics -->
+                <div class="config-card">
+                    <h3>Session Metrics</h3>
+                    <div class="metric-item">
+                        <span class="metric-label">Files Processed</span>
+                        <span class="metric-value" id="files-processed">0</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Events Analyzed</span>
+                        <span class="metric-value" id="events-analyzed">0</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Issues Found</span>
+                        <span class="metric-value" id="issues-found">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app_purple.js"></script>
+</body>
+</html>

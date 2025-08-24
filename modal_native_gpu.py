@@ -1,26 +1,41 @@
-import modal
+"""Async Modal deployment with GPU support and SonarCloud compliance."""
+import asyncio
 import os
+import tempfile
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 
-# Configuration - Maximum Economical Deployment
+import modal
+import aiofiles
+import httpx
+
+from constants import (
+    DEFAULT_PORT, MEMORY_SIZE, CPU_COUNT, MAX_TIMEOUT, SCALEDOWN_WINDOW,
+    UPLOAD_ENDPOINT, HEALTH_ENDPOINT, ML_ANALYSIS_ENDPOINT, GENERATE_REPORT_ENDPOINT,
+    FILE_NOT_FOUND_ERROR, PROCESSING_ERROR, UPLOAD_SUCCESS, ANALYSIS_COMPLETE,
+    ML_ANALYSIS_TYPES, REPORT_TYPES, ENCODING_UTF8, MAX_FILE_SIZE_MB
+)
+
+# Configuration
 APP_NAME = "logsense-economical"
-PORT = 8000
+PORT = DEFAULT_PORT
 
-# Create Modal image with minimal dependencies for cost optimization
+# Create Modal image with async dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install_from_requirements("requirements-modal.txt")
-    .pip_install("jinja2")  # Add Jinja2 for templates
+    .pip_install(["jinja2", "aiofiles>=23.0.0", "httpx>=0.24.0"])
     .add_local_dir(".", remote_path="/root/app")
 )
 
 app = modal.App(name=APP_NAME, image=image)
 
-# Maximum economical deployment - scales to zero immediately when idle
 @app.function(
-    timeout=300,  # 5 minute timeout
-    memory=2048,  # 2GB memory for stability
-    min_containers=0,  # Scale to zero when idle - MAXIMUM ECONOMICAL
-    scaledown_window=60,  # Scale down after just 1 minute idle
+    timeout=MAX_TIMEOUT,
+    memory=MEMORY_SIZE,
+    min_containers=0,
+    scaledown_window=SCALEDOWN_WINDOW,
+    retries=modal.Retries(max_retries=0)
 )
 @modal.asgi_app()
 def economical_app():
