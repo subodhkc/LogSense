@@ -44,9 +44,11 @@ jobs:
           MODAL_TOKEN_ID_CLEAN=$(printf '%s' "$MODAL_TOKEN_ID" | tr -d '\r\n')
           MODAL_TOKEN_SECRET_CLEAN=$(printf '%s' "$MODAL_TOKEN_SECRET" | tr -d '\r\n')
           modal token set --token-id "$MODAL_TOKEN_ID_CLEAN" --token-secret "$MODAL_TOKEN_SECRET_CLEAN"
+          # Unset env vars so they do not override the stored credentials
+          unset MODAL_TOKEN_ID MODAL_TOKEN_SECRET || true
           echo "Setting profile to haiec..."
           modal profile activate haiec
           echo "Active profiles:"
           modal profile list || true
           echo "Starting deployment..."
-          modal deploy modal_deploy_async.py
+          modal deploy modal_deploy_async.py --name logsense-async-v2
