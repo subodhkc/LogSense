@@ -4,26 +4,17 @@ from datetime import datetime
 
 app = modal.App("logsense-async")  # keep app name; keep URL domain stable
 
-# Force new container build with version bump and cache buster
+# Minimal FastAPI-first image - install FastAPI FIRST and ONLY
 web_image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install(
-        "fastapi==0.115.3",  # Bumped to force rebuild
-        "starlette==0.38.4",  # Bumped to force rebuild
-        "uvicorn==0.30.6",
-        "pydantic==2.8.2",
-        "python-multipart==0.0.9",
-        "jinja2==3.1.4",
-        "aiofiles==24.1.0"
-    )
-    .run_commands(
-        "echo 'FORCE_REBUILD_20250824_1716' > /tmp/rebuild.txt",
-        "pip install --no-cache-dir --force-reinstall fastapi==0.115.3 starlette==0.38.4"
-    )  # Force complete rebuild
+    .pip_install("fastapi==0.115.3")  # ONLY FastAPI first
+    .pip_install("uvicorn[standard]==0.30.6")  # Then uvicorn
+    .pip_install("python-multipart==0.0.9")  # Then multipart for uploads
+    .run_commands("python -c 'import fastapi; print(f\"FastAPI {fastapi.__version__} installed successfully\")'")
     .add_local_dir(".", remote_path="/root/app")
 )
 
-ASYNC_CANARY = "FORCE_REBUILD_20250824_1716_NO_CACHE"
+ASYNC_CANARY = "FASTAPI_FIRST_20250824_1723_MINIMAL"
 
 # Bind the exact endpoint you're hitting: function name must be "async-app"
 @app.function(image=web_image, name="async-app")
@@ -38,15 +29,12 @@ def async_app():
         f"pid={os.getpid()}"
     )
 
-    # Import FastAPI and verify versions
+    # Import FastAPI and verify versions - MINIMAL imports only
     try:
         from fastapi import FastAPI
-        from fastapi.middleware.cors import CORSMiddleware
-        import starlette, pydantic, uvicorn
-        print(
-            f"[VERSIONS] fastapi>ok pydantic={pydantic.__version__} "
-            f"uvicorn={uvicorn.__version__} starlette={starlette.__version__}"
-        )
+        from fastapi.responses import JSONResponse, HTMLResponse
+        import uvicorn
+        print(f"[VERSIONS] fastapi>ok uvicorn={uvicorn.__version__}")
     except Exception as e:
         print(f"[FASTAPI_IMPORT_FAIL] {e!r}")
         import subprocess
@@ -54,60 +42,13 @@ def async_app():
         print("[PIP_FREEZE_HEAD]\n" + out[:2000])
         raise
 
-    # Create FastAPI app with CORS
+    # Create minimal FastAPI app - NO CORS to avoid extra dependencies
     api = FastAPI(title="LogSense Enterprise", version="1.0.0")
-    api.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
 
-    # Try to attach existing router/templates/static (additive, no failures)
+    # MINIMAL setup - skip router/static/templates to avoid import issues
     routes_attached = []
-    
-    # Try multiple router import paths
-    router_paths = [
-        ("app.routes", "router"),
-        ("web.routes", "router"), 
-        ("routes", "router"),
-        ("modal_native", "router")
-    ]
-    
-    sys.path.insert(0, "/root/app")
-    
-    for module_path, attr_name in router_paths:
-        try:
-            module = __import__(module_path, fromlist=[attr_name])
-            router = getattr(module, attr_name)
-            api.include_router(router)
-            routes_attached.append(f"{module_path}.{attr_name}")
-            print(f"[ROUTES] attached: {module_path}.{attr_name}")
-            break
-        except Exception as e:
-            print(f"[ROUTES] skip {module_path}.{attr_name}: {e!r}")
-
-    # Mount static files if available
-    try:
-        from fastapi.staticfiles import StaticFiles
-        import os
-        if os.path.exists("/root/app/static"):
-            api.mount("/static", StaticFiles(directory="/root/app/static"), name="static")
-            print("[STATIC] mounted: /root/app/static")
-    except Exception as e:
-        print(f"[STATIC] skip: {e!r}")
-
-    # Setup templates if available
     templates = None
-    try:
-        from fastapi.templating import Jinja2Templates
-        import os
-        if os.path.exists("/root/app/templates"):
-            templates = Jinja2Templates(directory="/root/app/templates")
-            print("[TEMPLATES] loaded: /root/app/templates")
-    except Exception as e:
-        print(f"[TEMPLATES] skip: {e!r}")
+    print("[MINIMAL] Skipping router/static/templates for FastAPI-first test")
 
     # Core endpoints - preserve ALL existing functionality
     
@@ -122,19 +63,14 @@ def async_app():
         }
 
     @api.get("/")
-    async def index(request):
-        from fastapi import Request
-        from fastapi.responses import HTMLResponse
-        
-        if templates:
-            return templates.TemplateResponse("index.html", {"request": request})
-        else:
-            return HTMLResponse("""
-            <html><head><title>LogSense Enterprise</title></head>
-            <body><h1>LogSense Enterprise v2.0.0</h1>
-            <p>Templates not available. Upload functionality available at POST /upload</p>
-            </body></html>
-            """)
+    async def index():
+        return HTMLResponse("""
+        <html><head><title>LogSense Enterprise</title></head>
+        <body><h1>LogSense Enterprise v2.0.0</h1>
+        <p>FastAPI working! Upload functionality available at POST /upload</p>
+        <p>Health check: <a href="/health">/health</a></p>
+        </body></html>
+        """)
 
     @api.post("/upload")
     async def upload_file(request, file):
