@@ -21,7 +21,7 @@ web_image = (
 # Global cache for analysis results (preserve existing functionality)
 analysis_cache = {}
 
-@app.function(image=web_image, name="economical-app")
+@app.function(image=web_image, name="economical-app", gpu="T4")
 @modal.asgi_app()
 def economical_app():
     import os, sys, pkgutil, platform
@@ -254,9 +254,14 @@ def economical_app():
                     
                     os.unlink(temp_zip.name)
             else:
-                # Single log file
-                log_content = content.decode('utf-8', errors='ignore')
-                events = parse_log_file(log_content, file.filename)
+                # Single log file - save to temp file and pass path
+                with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8', errors='ignore') as temp_log:
+                    temp_log.write(content.decode('utf-8', errors='ignore'))
+                    temp_log_path = temp_log.name
+                
+                from analysis import parse_log_file
+                events = parse_log_file(temp_log_path)
+                os.unlink(temp_log_path)  # Clean up
             
             # Analyze events
             analysis_result = analyze_events(events)
@@ -428,22 +433,22 @@ def economical_app():
             
             # Basic statistics
             total_events = len(events)
-            errors = [e for e in events if getattr(e, 'severity', '').upper() in ['ERROR', 'CRITICAL']]
-            warnings = [e for e in events if getattr(e, 'severity', '').upper() == 'WARNING']
+            errors = [e for e in events if e.get('severity', '').upper() in ['ERROR', 'CRITICAL']]
+            warnings = [e for e in events if e.get('severity', '').upper() == 'WARNING']
             
             insights.append(f"Total events processed: {total_events}")
             insights.append(f"Errors/Critical: {len(errors)} | Warnings: {len(warnings)}")
             
             # Component analysis
             from collections import Counter
-            components = Counter([getattr(e, 'component', 'Unknown') for e in errors])
+            components = Counter([e.get('component', 'Unknown') for e in errors])
             if components:
                 top_component = components.most_common(1)[0]
                 insights.append(f"Top error-prone component: {top_component[0]} ({top_component[1]} errors)")
             
             # Time analysis
             try:
-                timestamps = [getattr(e, 'timestamp') for e in events if hasattr(e, 'timestamp')]
+                timestamps = [e.get('timestamp') for e in events if hasattr(e, 'timestamp')]
                 if timestamps:
                     start_time = min(timestamps)
                     end_time = max(timestamps)
