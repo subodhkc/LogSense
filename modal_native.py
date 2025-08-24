@@ -15,7 +15,7 @@ web_image = (
         "jinja2==3.1.*",
         "aiofiles==24.1.0"
     )
-    .add_local_dir(".", remote_path="/root/app")
+    .add_local_dir(".", remote_path="/root/app") # Cache buster: 2025-08-24T18:26:43
 )
 
 # Global cache for analysis results (preserve existing functionality)
