@@ -74,8 +74,10 @@ def run():
     
     print(f"[MODAL] Command: {cmd}", flush=True)
     
-    # Use subprocess.Popen for non-blocking execution
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    # Use subprocess.Popen for non-blocking execution with safer argument parsing
+    import shlex
+    cmd_args = shlex.split(cmd) if isinstance(cmd, str) else cmd
+    process = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     
     # Log initial output to verify startup
     try:

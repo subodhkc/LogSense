@@ -1,86 +1,107 @@
-# LogSense - Enterprise Log Analysis & RCA
+# LogSense - Enterprise Log Analysis Platform
 
-LogSense is a professional, modular log analysis application built with Python and Streamlit. It helps TPMs, QA engineers, and support teams triage provisioning/installer logs (BIOS, SoftPaq, MSI, imaging, agents) and produce concise, defensible root[U+2011]cause analysis (RCA). AI assistance is available via local LLM or cloud.
+A comprehensive log analysis tool designed for technical program managers, QA engineers, and support teams. LogSense helps you quickly analyze system logs from BIOS updates, software installations, imaging processes, and agent deployments to identify root causes of issues.
 
+## Key Features
 
+**Smart Log Processing**
+- Upload ZIP files or individual log files with automatic parsing
+- Built-in error detection and pattern recognition
+- Timeline reconstruction and event correlation
+- Test plan validation against actual log events
 
-## [SEARCH] Key Features
-- Secure log ingestion (ZIP and single-file) with robust parsing
-- Structured pre[U+2011]AI RCA: error detection, correlations, and rule[U+2011]based recommendations
-- Interactive timeline, test plan validation, and focused log filtering
-- Advanced analytics: clustering, anomaly detection (SVM), decision trees
-- PII redaction engine with configurable patterns
-- Professional PDF reporting with corporate SaaS design and executive one[U+2011]pager
-- Optional AI analysis: local (offline) model or OpenAI fallback
+**Advanced Analytics**
+- Machine learning-powered clustering and anomaly detection
+- Decision tree analysis for complex troubleshooting
+- Statistical correlation analysis across log sources
+- PII redaction with configurable privacy patterns
 
-## [U+1F9F0] Setup
+**Professional Reporting**
+- Executive summary reports with key findings
+- Detailed technical analysis with charts and timelines
+- PDF export with corporate styling
+- Customizable report templates
 
-### 1. Clone and Setup
+**AI-Powered Insights**
+- Local AI model (Microsoft Phi-2) for offline analysis
+- Optional cloud AI integration for enhanced capabilities
+- Natural language explanations of technical issues
+
+## [U+1F9F0] Getting Started
+
+### Installation
 ```bash
+git clone <repository-url>
+cd LogSense
 pip install -r requirements.txt
 ```
 
-### 2. Run
+### Quick Start
 ```bash
+# Local development
 streamlit run skc_log_analyzer.py
+
+# Or use the web interface
+python serve_streamlit.py
 ```
 
-### 3. Folder Structure (condensed)
+### Project Structure
 ```
-[U+251C][U+2500][U+2500] skc_log_analyzer.py
-[U+251C][U+2500][U+2500] analysis.py
-[U+251C][U+2500][U+2500] redaction.py
-[U+251C][U+2500][U+2500] test_plan.py
-[U+251C][U+2500][U+2500] recommendations.py
-[U+251C][U+2500][U+2500] ai_rca.py                # Hybrid AI RCA (offline Phi[U+2011]2 + OpenAI fallback)
-[U+251C][U+2500][U+2500] report/                  # PDF report package (generate_pdf, pdf_builder)
-[U+251C][U+2500][U+2500] setup.py
-[U+251C][U+2500][U+2500] clustering_model.py
-[U+251C][U+2500][U+2500] decision_tree_model.py
-[U+251C][U+2500][U+2500] anomaly_svm.py
-[U+251C][U+2500][U+2500] utils.py
-[U+251C][U+2500][U+2500] requirements.txt
-[U+251C][U+2500][U+2500] plans/
-[U+2502]   [U+251C][U+2500][U+2500] dash_test_plan.json
-[U+2502]   [U+2514][U+2500][U+2500] softpaq_test_plan.json
-[U+251C][U+2500][U+2500] config/
-[U+2502]   [U+251C][U+2500][U+2500] redact.json
-[U+2502]   [U+2514][U+2500][U+2500] model.yaml   # Phi[U+2011]2 config (model, generation params)
+LogSense/
+├── skc_log_analyzer.py      # Main application entry point
+├── analysis.py              # Core log analysis engine
+├── ai_rca.py               # AI-powered root cause analysis
+├── report/                 # PDF report generation
+├── config/                 # Configuration files
+│   ├── redact.json        # Privacy redaction rules
+│   └── model.yaml         # AI model settings
+├── plans/                  # Test plan templates
+└── templates/              # Web UI templates
 ```
 
+## [U+1F510] Security & Privacy
 
+**Data Protection**
+- All log processing happens locally on your machine
+- PII redaction before any external API calls
+- No sensitive data leaves your environment without explicit consent
+- Configurable privacy rules for different data types
 
-## [U+1F510] Security
-- Only redacted logs are sent to any external API (if enabled)
-- All parsing, analytics, and local LLM inference run locally
+**Deployment Options**
+- **Local**: Run on your desktop with `streamlit run skc_log_analyzer.py`
+- **Modal Cloud**: Deploy to Modal for team access with GPU acceleration
+- **Docker**: Containerized deployment for enterprise environments
 
-## [U+1F4E6] Deployment
-- Local: `streamlit run skc_log_analyzer.py`
-- Docker (CPU): build with the provided `Dockerfile`
+## AI Configuration
 
-## [U+1F9E0] LLM Support (Phi[U+2011]2 Migration)
-- Default offline model: Microsoft Phi[U+2011]2
-- Optional LoRA adapters auto[U+2011]load from `adapters/phi2-lora`
-- OpenAI fallback supported if `OPENAI_API_KEY` is set
+LogSense supports multiple AI backends for enhanced analysis:
 
-Env/config overrides (also see `config/model.yaml`):
-- `MODEL_BACKEND`: `phi2` (default) or `legacy`
-- `MODEL_NAME`: default `microsoft/phi-2` (CI uses a tiny model)
-- `QUANTIZATION`: `none` | `8bit` | `4bit` (bitsandbytes; Linux recommended)
-- `MAX_NEW_TOKENS`, `TEMPERATURE`, `TOP_P`, `REPETITION_PENALTY`
+**Local AI (Recommended)**
+- Uses Microsoft Phi-2 model running entirely offline
+- No internet connection required for AI analysis
+- Full privacy and data control
+
+**Cloud AI (Optional)**
+- OpenAI integration for advanced natural language processing
+- Only redacted logs are sent to external services
+- Requires `OPENAI_API_KEY` environment variable
+
+**Configuration Options**
+```bash
+# Environment variables
+MODEL_BACKEND=phi2          # or 'openai'
+MODEL_NAME=microsoft/phi-2   # Local model path
+QUANTIZATION=4bit           # Memory optimization
+```
+
+## Usage Tips
+
+1. **Start with local analysis** - Use the Python analytics engine first
+2. **Upload ZIP files** - Faster processing of multiple log files
+3. **Review redaction** - Check privacy settings before enabling cloud AI
+4. **Export reports** - Generate PDF summaries for stakeholders
 
 ---
 
-
-
-
-## UI Engine Toggles
-- Use Python Engines (rules, validations, summaries)
-- Use Local LLM (Phi[U+2011]2)
-- Use Cloud AI (OpenAI)
-
-These appear in the sidebar and control what is executed and rendered.
-
-## Credits
-Built by Subodh Kc
-Powered by Python, Streamlit, Transformers, and open[U+2011]source intelligence
+**Developed by Subodh KC**  
+*Enterprise log analysis made simple*

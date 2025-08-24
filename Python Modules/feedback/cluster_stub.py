@@ -20,4 +20,5 @@ def suggest_new_patterns(unmatched_lines):
     Returns:
         List[str]: Suggestions or templates for new rule candidates.
     """
-    return ["TODO: ML-based rule suggestion not implemented yet."]
+    # ML-based rule suggestion - future enhancement
+    return ["Rule suggestion engine under development"]
