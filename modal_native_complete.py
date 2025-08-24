@@ -1,7 +1,7 @@
 # modal_native_complete.py - Complete Modal FastAPI app with LogSense functionality
 import modal
 
-APP_NAME = "logsense-native-complete"
+APP_NAME = "logsense-native-complete-v2"
 
 # Build image with full ML dependencies for local AI
 image = (
