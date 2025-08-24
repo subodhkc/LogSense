@@ -28,7 +28,12 @@ PORT = DEFAULT_PORT
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install_from_requirements("requirements-modal.txt")
-    .pip_install(["jinja2", "aiofiles>=23.0.0", "httpx>=0.24.0"])
+    .pip_install([
+        "jinja2>=3.1.0",
+        "aiofiles>=23.0.0", 
+        "httpx>=0.24.0",
+        "python-multipart>=0.0.6"
+    ])
     .add_local_dir(".", remote_path="/root/app")
 )
 
