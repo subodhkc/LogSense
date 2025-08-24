@@ -140,6 +140,9 @@ def economical_app():
             
             # Clean up temp file
             os.unlink(temp_path)
+
+            # Convert SimpleNamespace to dict for JSON serialization
+            events = [vars(e) for e in events]
             
             # Store in both caches
             session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -198,11 +201,11 @@ def economical_app():
                 
                 for event in events:
                     # Count event types
-                    event_type = getattr(event, 'event_type', 'unknown')
+                    event_type = event.get('event_type', 'unknown')
                     event_types[event_type] = event_types.get(event_type, 0) + 1
                     
                     # Basic severity classification
-                    message = str(getattr(event, 'message', '')).lower()
+                    message = str(event.get('message', '')).lower()
                     if any(word in message for word in ['error', 'fail', 'critical', 'fatal']):
                         severity_counts["high"] += 1
                     elif any(word in message for word in ['warn', 'warning', 'issue']):
