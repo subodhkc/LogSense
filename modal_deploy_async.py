@@ -28,6 +28,11 @@ web_image = (
 @app.function(image=web_image, allow_concurrent_inputs=100)
 @modal.asgi_app()
 def async_app():
+    # Runtime probe: verify FastAPI is discoverable in this container
+    import sys as _sys, pkgutil as _pkgutil
+    fastapi_present = _pkgutil.find_loader("fastapi") is not None
+    print(f"[RUNTIME_PROBE] py={_sys.version.split()[0]} fastapi_present={fastapi_present}")
+
     # Import inside the function so resolution uses the baked image
     import fastapi, pydantic, uvicorn, starlette  # version print only
     from fastapi import FastAPI, UploadFile, File, Request
