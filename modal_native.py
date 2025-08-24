@@ -150,10 +150,10 @@ def economical_app():
             sanitized_events = []
             for event in events:
                 event_dict = {
-                    'timestamp': getattr(event, 'timestamp', ''),
-                    'component': getattr(event, 'component', ''),
-                    'message': getattr(event, 'message', ''),
-                    'severity': getattr(event, 'severity', 'INFO')
+                    'timestamp': event.get('timestamp', ''),
+                    'component': event.get('component', ''),
+                    'message': event.get('message', ''),
+                    'severity': event.get('severity', 'INFO')
                 }
                 sanitized_event = sanitize_log_data(event_dict)
                 sanitized_events.append(sanitized_event)

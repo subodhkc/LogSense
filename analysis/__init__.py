@@ -54,6 +54,6 @@ def parse_logs(text: str, fname: str = "log.txt"):
             )
         except Exception:
             continue
-    events.sort(key=lambda e: getattr(e, "timestamp", datetime.now()))
+        events.sort(key=lambda e: e.get("timestamp", datetime.now()))
     return events
 
