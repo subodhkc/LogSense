@@ -1,7 +1,7 @@
 # modal_native.py - Canonical Modal FastAPI entry point
 import modal
 
-app = modal.App("logsense-async")  # Match existing URL pattern
+app = modal.App("logsense-async")  # Will deploy to haiec--logsense-async-async-app.modal.run
 
 # Minimal web image with explicit FastAPI pins
 web_image = (
