@@ -16,7 +16,6 @@ jobs:
       MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
       MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      MODAL_PROFILE: haiec
 
     steps:
       - name: Checkout
@@ -30,8 +29,17 @@ jobs:
       - name: Install Modal CLI
         run: pip install --upgrade pip modal
 
+      - name: Check secrets availability
+        run: |
+          echo "Checking if secrets are available..."
+          if [ -z "$MODAL_TOKEN_ID" ]; then echo "MODAL_TOKEN_ID is empty"; exit 1; fi
+          if [ -z "$MODAL_TOKEN_SECRET" ]; then echo "MODAL_TOKEN_SECRET is empty"; exit 1; fi
+          echo "Secrets are available"
+
       - name: Deploy async app to Modal
         working-directory: ./
         run: |
-          modal token set --token-id $MODAL_TOKEN_ID --token-secret $MODAL_TOKEN_SECRET
-          modal deploy modal_deploy_async.py --profile haiec
+          echo "Setting up Modal authentication..."
+          modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
+          echo "Deploying to Modal..."
+          modal deploy modal_deploy_async.py --name logsense-async
