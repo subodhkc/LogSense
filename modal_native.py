@@ -1,7 +1,7 @@
 # modal_native.py - Canonical Modal FastAPI entry point
 import modal
 
-app = modal.App("logsense-native")  # Canonical app name
+app = modal.App("logsense-async")  # Match existing URL pattern
 
 # Minimal web image with explicit FastAPI pins
 web_image = (
@@ -21,12 +21,12 @@ web_image = (
 # Global cache for analysis results (preserve existing functionality)
 analysis_cache = {}
 
-@app.function(image=web_image, name="web-http")
+@app.function(image=web_image, name="async-app")
 @modal.asgi_app()
-def web_http_app():
+def async_app():
     import os, sys, pkgutil, platform
     print(
-        f"[RUNTIME_PROBE] app='logsense-native' func='web-http' "
+        f"[RUNTIME_PROBE] app='logsense-async' func='async-app' "
         f"py={platform.python_version()} "
         f"fastapi_present={pkgutil.find_loader('fastapi') is not None} "
         f"pid={os.getpid()}"

@@ -46,20 +46,20 @@ jobs:
           modal token set --token-id "$MODAL_TOKEN_ID_CLEAN" --token-secret "$MODAL_TOKEN_SECRET_CLEAN"
           # Unset env vars so they do not override the stored credentials
           unset MODAL_TOKEN_ID MODAL_TOKEN_SECRET || true
-          echo "Setting profile to subodhkc..."
-          modal profile activate subodhkc
+          echo "Setting profile to haiec..."
+          modal profile activate haiec
           echo "Active profiles:"
           modal profile list || true
-          echo "ENTRY=modal_deploy_async.py"
+          echo "ENTRY=modal_native.py"
           git rev-parse HEAD
-          test -f modal_deploy_async.py && echo "FOUND modal_deploy_async.py"
+          test -f modal_native.py && echo "FOUND modal_native.py"
           echo "Checking single ASGI export..."
           python - << 'PY'
           import re, sys, pathlib
-          p = pathlib.Path("modal_deploy_async.py").read_text()
+          p = pathlib.Path("modal_native.py").read_text()
           n = len(re.findall(r"@modal\.asgi_app\(", p))
           print("ASGI_EXPORTS_IN_ENTRY=", n)
           sys.exit(0 if n==1 else 1)
           PY
           echo "Starting deployment of canonical entry..."
-          modal deploy modal_deploy_async.py
+          modal deploy modal_native.py

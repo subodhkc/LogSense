@@ -17,63 +17,65 @@ web_image = (
 ASYNC_CANARY = "FASTAPI_FIRST_20250824_1723_MINIMAL"
 
 # Bind the exact endpoint you're hitting: function name must be "async-app"
-@app.function(image=web_image, name="async-app")
-@modal.asgi_app()
-def async_app():
-    # CANARY + runtime probe BEFORE importing FastAPI
-    import os, sys, pkgutil, platform
-    print(
-        f"[CANARY] {ASYNC_CANARY} app='logsense-async' func='async-app' "
-        f"py={platform.python_version()} "
-        f"fastapi_present={pkgutil.find_loader('fastapi') is not None} "
-        f"pid={os.getpid()}"
-    )
+# Disabled to avoid conflicts with modal_native.py deployment
+if False:
+    @app.function(image=web_image, name="async-app")
+    @modal.asgi_app()
+    def async_app():
+        # CANARY + runtime probe BEFORE importing FastAPI
+        import os, sys, pkgutil, platform
+        print(
+            f"[CANARY] {ASYNC_CANARY} app='logsense-async' func='async-app' "
+            f"py={platform.python_version()} "
+            f"fastapi_present={pkgutil.find_loader('fastapi') is not None} "
+            f"pid={os.getpid()}"
+        )
 
-    # Import FastAPI and verify versions - MINIMAL imports only
-    try:
-        from fastapi import FastAPI
-        from fastapi.responses import JSONResponse, HTMLResponse
-        import uvicorn
-        print(f"[VERSIONS] fastapi>ok uvicorn={uvicorn.__version__}")
-    except Exception as e:
-        print(f"[FASTAPI_IMPORT_FAIL] {e!r}")
-        import subprocess
-        out = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True).stdout
-        print("[PIP_FREEZE_HEAD]\n" + out[:2000])
-        raise
+        # Import FastAPI and verify versions - MINIMAL imports only
+        try:
+            from fastapi import FastAPI
+            from fastapi.responses import JSONResponse, HTMLResponse
+            import uvicorn
+            print(f"[VERSIONS] fastapi>ok uvicorn={uvicorn.__version__}")
+        except Exception as e:
+            print(f"[FASTAPI_IMPORT_FAIL] {e!r}")
+            import subprocess
+            out = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True).stdout
+            print("[PIP_FREEZE_HEAD]\n" + out[:2000])
+            raise
 
-    # Create minimal FastAPI app - NO CORS to avoid extra dependencies
-    api = FastAPI(title="LogSense Enterprise", version="1.0.0")
+        # Create minimal FastAPI app - NO CORS to avoid extra dependencies
+        api = FastAPI(title="LogSense Enterprise", version="1.0.0")
 
-    # MINIMAL setup - skip router/static/templates to avoid import issues
-    routes_attached = []
-    templates = None
-    print("[MINIMAL] Skipping router/static/templates for FastAPI-first test")
+        # MINIMAL setup - skip router/static/templates to avoid import issues
+        routes_attached = []
+        templates = None
+        print("[MINIMAL] Skipping router/static/templates for FastAPI-first test")
 
-    # Core endpoints - preserve ALL existing functionality
-    
-    @api.get("/health")
-    async def health():
-        return {
-            "status": "ok", 
-            "service": "haiec", 
-            "version": "1.0.0", 
-            "canary": ASYNC_CANARY,
-            "routes_attached": routes_attached
-        }
+        # Core endpoints - preserve ALL existing functionality
+        
+        @api.get("/health")
+        async def health():
+            return {
+                "status": "ok", 
+                "service": "haiec", 
+                "version": "1.0.0", 
+                "canary": ASYNC_CANARY,
+                "routes_attached": routes_attached
+            }
 
-    @api.get("/")
-    async def index():
-        return HTMLResponse("""
-        <html><head><title>LogSense Enterprise</title></head>
-        <body><h1>LogSense Enterprise v2.0.0</h1>
-        <p>FastAPI working! Upload functionality available at POST /upload</p>
-        <p>Health check: <a href="/health">/health</a></p>
-        </body></html>
-        """)
+        @api.get("/")
+        async def index():
+            return HTMLResponse("""
+            <html><head><title>LogSense Enterprise</title></head>
+            <body><h1>LogSense Enterprise v2.0.0</h1>
+            <p>FastAPI working! Upload functionality available at POST /upload</p>
+            <p>Health check: <a href="/health">/health</a></p>
+            </body></html>
+            """)
 
-    @api.post("/upload")
-    async def upload_file(request, file):
+        @api.post("/upload")
+        async def upload_file(request, file):
         """Handle file upload with comprehensive security and compliance"""
         from fastapi import File, UploadFile, Request
         from fastapi.responses import JSONResponse
@@ -314,7 +316,7 @@ def async_app():
                 "signature": "LogSense Enterprise v2.0.0 - Error Handler"
             }, status_code=500)
 
-    return api
+        return api
 
 # Global analysis cache
 analysis_cache = []
