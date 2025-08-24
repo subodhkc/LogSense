@@ -16,6 +16,7 @@ jobs:
       MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
       MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MODAL_PROFILE: haiec
 
     steps:
       - name: Checkout
@@ -31,4 +32,6 @@ jobs:
 
       - name: Deploy async app to Modal
         working-directory: ./
-        run: modal deploy modal_deploy_async.py
+        run: |
+          modal token set --token-id $MODAL_TOKEN_ID --token-secret $MODAL_TOKEN_SECRET
+          modal deploy modal_deploy_async.py --profile haiec
