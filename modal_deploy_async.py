@@ -9,7 +9,7 @@
 import modal
 from typing import Dict, Any
 
-app = modal.App("haiec-logsense")
+app = modal.App("logsense-async-async-app")
 
 # Minimal, pinned web image for FastAPI-only server
 web_image = (
@@ -25,9 +25,9 @@ web_image = (
     )
 )
 
-@app.function(image=web_image, name="web-http", allow_concurrent_inputs=100)
+@app.function(image=web_image, name="async-app", allow_concurrent_inputs=100)
 @modal.asgi_app()
-def web_http_app():
+def async_app():
     # Runtime probe: verify FastAPI is discoverable in this container
     import sys as _sys, pkgutil as _pkgutil
     fastapi_present = _pkgutil.find_loader("fastapi") is not None
