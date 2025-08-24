@@ -11,15 +11,27 @@ PORT = 8000
 # Create Modal image with GPU support and LLM dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")  # Use lightweight modal requirements
     .pip_install([
-        "fastapi>=0.104.0",
+        "fastapi[standard]>=0.104.0",
         "jinja2>=3.1.0",
         "aiofiles>=23.0.0", 
         "httpx>=0.24.0",
         "python-multipart>=0.0.6",
-        "torch>=2.0.0",
-        "transformers>=4.26.0"
+        "pandas>=1.5.0",
+        "numpy>=1.24.0",
+        "matplotlib>=3.6.0",
+        "seaborn>=0.12.0",
+        "scikit-learn>=1.3.0",
+        "reportlab>=4.2.2",
+        "python-dotenv>=1.0.0",
+        "pyyaml>=6.0.1",
+        "openai>=1.0.0",
+        "python-dateutil>=2.8.0",
+        "aiohttp>=3.10.11",
+        "urllib3>=2.2.3",
+        "requests>=2.32.0",
+        "cryptography>=43.0.0",
+        "certifi>=2024.8.30"
     ])
     .env({
         "STREAMLIT_BROWSER_GATHER_USAGE_STATS": "false",
@@ -37,9 +49,9 @@ app = modal.App(name=APP_NAME, image=image)
     timeout=900,
     memory=4096,  # Increased for LLM model loading
     gpu="A10G",  # Single A10G GPU for LLM inference
-    concurrency_limit=10,  # Updated parameter name
     container_idle_timeout=120  # Aggressive 2-minute idle timeout
 )
+@modal.concurrent(10)  # Use decorator instead of parameter
 @modal.asgi_app()
 def async_app():
     """Create FastAPI app with async endpoints - imports handled here."""

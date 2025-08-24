@@ -19,6 +19,6 @@ jobs:
           pip install -r requirements.txt
           pip install pytest modal fastapi
       - name: Unit tests
-        run: pytest -q --ignore=modal_test.py --ignore=serve_minimal_test.py
+        run: pytest -q
       - name: Inference smoke
         run: python -m modules.phi2_inference --smoke
