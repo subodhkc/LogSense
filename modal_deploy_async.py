@@ -25,9 +25,9 @@ web_image = (
     )
 )
 
-@app.function(image=web_image, allow_concurrent_inputs=100)
+@app.function(image=web_image, name="web-http", allow_concurrent_inputs=100)
 @modal.asgi_app()
-def async_app():
+def web_http_app():
     # Runtime probe: verify FastAPI is discoverable in this container
     import sys as _sys, pkgutil as _pkgutil
     fastapi_present = _pkgutil.find_loader("fastapi") is not None
@@ -66,6 +66,14 @@ def async_app():
     # Ensure none of those import GPU libs at import-time; move heavy loads to handlers or a separate worker.
 
     return api
+
+@app.function(image=web_image, name="web-diag")
+def web_diag():
+    import pkgutil, platform
+    return {
+        "fastapi_present": pkgutil.find_loader("fastapi") is not None,
+        "python": platform.python_version(),
+    }
 
 
 if __name__ == "__main__":
