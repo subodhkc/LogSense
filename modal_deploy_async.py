@@ -92,9 +92,19 @@ def async_app():
     async def upload_file(request: Request, file: UploadFile = File(...)):
         """Handle async file upload with proper validation."""
         try:
+            # Validate file presence
+            if not file or not file.filename:
+                return JSONResponse({
+                    "success": False,
+                    "message": "No file provided"
+                }, status_code=400)
+            
             # Validate file type
             if not _is_valid_file_type(file.filename):
-                return _create_error_response("Invalid file type. Supported: .log, .txt, .zip", 400)
+                return JSONResponse({
+                    "success": False,
+                    "message": "Invalid file type. Supported: .log, .txt, .zip"
+                }, status_code=400)
             
             # Process file asynchronously
             temp_path = await _save_uploaded_file(file)
@@ -117,8 +127,16 @@ def async_app():
                 "redacted": analysis_data["redacted"]
             })
             
+        except ValueError as e:
+            return JSONResponse({
+                "success": False,
+                "message": str(e)
+            }, status_code=400)
         except Exception as e:
-            return _handle_error(e, "Upload failed")
+            return JSONResponse({
+                "success": False,
+                "message": "File upload failed. Please try again."
+            }, status_code=500)
     
     @web_app.post("/analyze")
     async def analyze_logs(request: Request):
@@ -199,6 +217,34 @@ def async_app():
             
         except Exception as e:
             return _handle_error(e, "Report generation failed")
+    
+    @web_app.post("/submit_context")
+    async def submit_context(request: Request):
+        """Handle context form submission with proper validation."""
+        try:
+            data = await request.json()
+            
+            # Validate required fields for security
+            context_data = _extract_and_validate_context(data)
+            
+            # Store context data in session cache
+            current_data = session_cache.get("current", {})
+            current_data["context"] = context_data
+            current_data["context_updated"] = True
+            session_cache["current"] = current_data
+            
+            return JSONResponse({
+                "status": "success",
+                "message": "Context saved successfully"
+            })
+            
+        except ValueError as e:
+            return JSONResponse({
+                "status": "error",
+                "error": f"Validation error: {str(e)}"
+            }, status_code=400)
+        except Exception as e:
+            return _handle_error(e, "Failed to save context")
     
     # Helper functions
     def _is_valid_file_type(filename: str) -> bool:
@@ -360,6 +406,49 @@ def async_app():
             "filename": current_data.get("filename", "unknown"),
             "redacted": current_data.get("redacted", False)
         }
+    
+    def _extract_and_validate_context(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract and validate context data with security checks."""
+        # Define allowed fields and max lengths for security
+        allowed_fields = {
+            "user_name": 100,
+            "app_name": 200,
+            "app_version": 50,
+            "test_environment": 50,
+            "issue_description": 2000,
+            "deployment_method": 100,
+            "build_number": 50,
+            "build_changes": 2000,
+            "previous_version": 50,
+            "use_python_engine": None,  # Boolean
+            "use_local_llm": None,      # Boolean
+            "use_cloud_ai": None        # Boolean
+        }
+        
+        validated_data = {}
+        
+        for field, max_length in allowed_fields.items():
+            value = data.get(field, "")
+            
+            # Handle boolean fields
+            if max_length is None:
+                validated_data[field] = bool(value) if value is not None else False
+                continue
+            
+            # Handle string fields
+            if isinstance(value, str):
+                # Sanitize input - remove potential XSS characters
+                sanitized_value = value.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+                
+                # Enforce length limits
+                if len(sanitized_value) > max_length:
+                    raise ValueError(f"{field} exceeds maximum length of {max_length} characters")
+                
+                validated_data[field] = sanitized_value.strip()
+            else:
+                validated_data[field] = str(value)[:max_length] if value else ""
+        
+        return validated_data
     
     return web_app
 

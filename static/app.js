@@ -224,17 +224,17 @@ async function uploadFile(file) {
     });
 
     try {
-        const response = await fetch('/analyze', {
+        const response = await fetch('/upload', {
             method: 'POST',
             body: formData
         });
         
         const result = await response.json();
         
-        if (result && result.status === 'success') {
+        if (result && result.success === true) {
             // Normalize to expected structure for UI
             analysisResults = {
-                events_analyzed: result.events_count || 0,
+                events_analyzed: result.event_count || 0,
                 issues_found: result.issues_found || 0,
                 files_processed: 1,
                 raw: result
@@ -244,7 +244,7 @@ async function uploadFile(file) {
             updateSessionMetrics();
             showAnalysisResults(analysisResults);
         } else {
-            alert('Upload failed: ' + (result && (result.error || result.message) || 'Unknown error'));
+            alert('Upload failed: ' + (result && result.message || 'Unknown error'));
         }
     } catch (error) {
         console.error('Upload error:', error);
