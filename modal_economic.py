@@ -10,8 +10,8 @@ PORT = 8000
 # Build a lean image and pre-bake deps. Exclude heavy stuff to cut cold-starts.
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")
     .add_local_dir(".", remote_path="/root/app")
+    .pip_install_from_requirements("/root/app/requirements-modal.txt")
 )
 
 app = modal.App(name=APP_NAME, image=image)

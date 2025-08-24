@@ -36,9 +36,9 @@ app = modal.App(name=APP_NAME, image=image)
     timeout=900,
     memory=4096,  # Increased for LLM model loading
     gpu="A10G",  # Single A10G GPU for LLM inference
-    container_idle_timeout=120  # Aggressive 2-minute idle timeout
+    scaledown_window=120  # Aggressive 2-minute idle timeout
 )
-@modal.concurrent(10)  # Use decorator instead of parameter
+@modal.concurrent(max_inputs=10)  # Modal 1.0 signature
 @modal.asgi_app()
 def async_app():
     """Create FastAPI app with async endpoints - imports handled here."""
@@ -76,11 +76,27 @@ def async_app():
     
     # Create FastAPI instance
     web_app = FastAPI(title="LogSense Async - AI Log Analysis", version="2.0.0")
-    
+
     # Mount static files and templates
     web_app.mount("/static", StaticFiles(directory="/root/app/static"), name="static")
     templates = Jinja2Templates(directory="/root/app/templates")
-    
+
+    # Log versions to verify correct installations at runtime
+    try:
+        import fastapi as _fastapi
+        import starlette as _starlette
+        import pydantic as _pydantic
+        import uvicorn as _uvicorn
+        print(
+            f"[VERSIONS] fastapi={getattr(_fastapi, '__version__', 'unknown')}, "
+            f"starlette={getattr(_starlette, '__version__', 'unknown')}, "
+            f"pydantic={getattr(_pydantic, '__version__', 'unknown')}, "
+            f"uvicorn={getattr(_uvicorn, '__version__', 'unknown')}",
+            flush=True,
+        )
+    except Exception as _ver_err:
+        print(f"[VERSIONS] Failed to log versions: {_ver_err}", flush=True)
+
     # Session cache for storing analysis results
     global_cache: Dict[str, Any] = {}
     session_cache: Dict[str, Any] = {}

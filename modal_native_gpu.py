@@ -6,8 +6,6 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 import modal
-import aiofiles
-import httpx
 
 from constants import (
     DEFAULT_PORT, MEMORY_SIZE, CPU_COUNT, MAX_TIMEOUT, SCALEDOWN_WINDOW,
@@ -20,12 +18,12 @@ from constants import (
 APP_NAME = "logsense-economical"
 PORT = DEFAULT_PORT
 
-# Create Modal image with async dependencies
+# Create Modal image with async dependencies (ensure requirements file is present first)
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")
-    .pip_install(["jinja2", "aiofiles>=23.0.0", "httpx>=0.24.0"])
     .add_local_dir(".", remote_path="/root/app")
+    .pip_install_from_requirements("/root/app/requirements-modal.txt")
+    .pip_install(["jinja2", "aiofiles>=23.0.0", "httpx>=0.24.0"])
 )
 
 app = modal.App(name=APP_NAME, image=image)
@@ -39,10 +37,27 @@ app = modal.App(name=APP_NAME, image=image)
 )
 @modal.asgi_app()
 def economical_app():
+    # Ensure FastAPI stack is available even if image cache missed installation
+    import sys
+    try:
+        import fastapi  # type: ignore
+    except Exception:
+        import subprocess
+        subprocess.check_call([
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "fastapi[standard]==0.116.1",
+            "uvicorn==0.30.6",
+            "python-multipart==0.0.20",
+        ])
+
     from fastapi import FastAPI, File, UploadFile, Request, Form
     from fastapi.responses import HTMLResponse, JSONResponse, Response
     from fastapi.staticfiles import StaticFiles
     from fastapi.templating import Jinja2Templates
+    import aiofiles, httpx
     import os
     import tempfile
     from datetime import datetime

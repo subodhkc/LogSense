@@ -11,6 +11,8 @@ trl>=0.7.0
 sentencepiece>=0.2.0
 fastapi[standard]==0.116.1
 uvicorn==0.30.6
+starlette>=0.37.2,<0.39.0
+pydantic>=2.7.4,<3
 httpx>=0.24.0
 aiofiles>=23.0.0
 python-multipart==0.0.20

@@ -8,11 +8,6 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 
 import modal
-import aiofiles
-from fastapi import FastAPI, File, UploadFile, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from constants import (
     DEFAULT_PORT, MEMORY_SIZE, CPU_COUNT, MAX_TIMEOUT, SCALEDOWN_WINDOW,
@@ -24,17 +19,17 @@ from constants import (
 APP_NAME = "logsense-async"
 PORT = DEFAULT_PORT
 
-# Create Modal image with async dependencies
+# Create Modal image with async dependencies (ensure requirements file is present first)
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install_from_requirements("requirements-modal.txt")
+    .add_local_dir(".", remote_path="/root/app")
+    .pip_install_from_requirements("/root/app/requirements-modal.txt")
     .pip_install([
         "jinja2>=3.1.0",
         "aiofiles>=23.0.0", 
         "httpx>=0.24.0",
         "python-multipart>=0.0.6"
     ])
-    .add_local_dir(".", remote_path="/root/app")
 )
 
 app = modal.App(name=APP_NAME, image=image)
@@ -58,6 +53,11 @@ def async_app():
     sys.path.insert(0, '/root/app')
     
     # Create FastAPI instance
+    import aiofiles
+    from fastapi import FastAPI, File, UploadFile, Request
+    from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.templating import Jinja2Templates
     web_app = FastAPI(title="LogSense Async - AI Log Analysis", version="2.0.0")
     
     # Mount static files and templates
