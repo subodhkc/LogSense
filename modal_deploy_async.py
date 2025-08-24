@@ -21,7 +21,7 @@ web_image = (
         "python-multipart==0.0.9",
         "jinja2==3.1.*",
         "aiofiles==24.1.0",
-        "starlette==0.38.*",
+        "starlette==0.38.3",
     )
 )
 
