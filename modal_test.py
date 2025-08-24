@@ -6,12 +6,12 @@ app = modal.App("logsense-test")
 image = modal.Image.debian_slim(python_version="3.11").pip_install("fastapi", "openai", "python-dotenv")
 
 @app.function(image=image)
-@modal.web_endpoint(method="GET")
+@modal.fastapi_endpoint(method="GET")
 def test():
     return {"status": "working", "message": "AI analysis fix deployed"}
 
 @app.function(image=image)  
-@modal.web_endpoint(method="POST")
+@modal.fastapi_endpoint(method="POST")
 def test_ai():
     try:
         import os

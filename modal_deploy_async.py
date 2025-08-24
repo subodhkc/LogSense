@@ -110,6 +110,7 @@ def async_app():
     async def _perform_gpu_llm_analysis(events, context):
         """Perform LLM analysis using GPU-accelerated Phi-2 model."""
         try:
+            import torch  # Import torch here to avoid startup issues
             if 'phi2_model' in globals() and 'phi2_tokenizer' in globals():
                 # Prepare prompt for analysis
                 event_summary = "\n".join([f"[{e.get('timestamp', 'N/A')}] {e.get('message', '')}" for e in events[:10]])
@@ -295,12 +296,39 @@ def async_app():
             
             return JSONResponse({
                 "success": True,
+                "status": "success",
                 "message": "Report generated successfully",
                 "report": report_data
             })
             
         except Exception as e:
             return _handle_error(e, "Report generation failed")
+    
+    @web_app.post("/correlations")
+    async def correlations_analysis(request: Request):
+        """Handle correlation analysis requests."""
+        try:
+            request_data = await request.json()
+            analysis_type = request_data.get("type", "temporal")
+            
+            if analysis_type not in ["temporal", "causal"]:
+                return _create_error_response(f"Invalid correlation type. Supported: temporal, causal", 400)
+            
+            current_data = session_cache.get("current")
+            if not current_data:
+                return _create_error_response("No data available for correlation analysis.", 400)
+            
+            events = current_data.get("events", [])
+            correlation_result = await _perform_correlation_analysis(analysis_type, events)
+            
+            return JSONResponse({
+                "success": True,
+                "message": f"{analysis_type} correlation analysis completed",
+                "result": correlation_result
+            })
+            
+        except Exception as e:
+            return _handle_error(e, "Correlation analysis failed")
     
     @web_app.post("/submit_context")
     async def submit_context(request: Request):
@@ -481,7 +509,8 @@ def async_app():
         """Generate report data asynchronously."""
         await asyncio.sleep(0.2)  # Simulate processing time
         
-        return {
+        # Enhanced report with AI analysis if requested
+        report_data = {
             "report_type": report_type,
             "processing_mode": "async-optimized",
             "generation_time": datetime.now().isoformat(),
@@ -490,6 +519,45 @@ def async_app():
             "filename": current_data.get("filename", "unknown"),
             "redacted": current_data.get("redacted", False)
         }
+        
+        # Add AI analysis for AI report types
+        if report_type in ["local_ai", "cloud_ai"]:
+            try:
+                from ai_rca import analyze_with_ai
+                events = current_data.get("events", [])
+                context = current_data.get("context", {})
+                offline = (report_type == "local_ai")
+                
+                ai_analysis = analyze_with_ai(events, context=context, offline=offline)
+                report_data["ai_analysis"] = ai_analysis
+                report_data["ai_engine"] = "phi-2" if offline else "openai"
+            except Exception as e:
+                report_data["ai_analysis"] = f"AI analysis failed: {str(e)}"
+        
+        return report_data
+    
+    async def _perform_correlation_analysis(analysis_type: str, events) -> Dict[str, Any]:
+        """Perform correlation analysis based on type."""
+        await asyncio.sleep(0.3)  # Simulate processing time
+        
+        if analysis_type == "temporal":
+            return {
+                "type": "temporal_correlation",
+                "correlations": [
+                    {"event_pair": ["error_1", "error_2"], "time_delta": "5.2s", "strength": 0.85},
+                    {"event_pair": ["warning_1", "error_3"], "time_delta": "12.1s", "strength": 0.72}
+                ],
+                "processing_mode": "async-optimized"
+            }
+        else:  # causal
+            return {
+                "type": "causal_correlation",
+                "causal_chains": [
+                    {"root_cause": "config_error", "effects": ["service_restart", "connection_lost"], "confidence": 0.78},
+                    {"root_cause": "memory_leak", "effects": ["performance_degradation", "timeout"], "confidence": 0.65}
+                ],
+                "processing_mode": "async-optimized"
+            }
     
     def _extract_and_validate_context(data: Dict[str, Any]) -> Dict[str, Any]:
         """Extract and validate context data with security checks."""

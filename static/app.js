@@ -369,33 +369,9 @@ function setupTabs() {
     });
 }
 
-// Show tab
-function showTab(tabName) {
-    // Hide all tabs
-    const tabs = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => tab.classList.remove('active'));
-    
-    // Remove active from all buttons
-    const buttons = document.querySelectorAll('.tab-button');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    
-    // Show selected tab
-    const selectedTab = document.getElementById(tabName + '-tab') || document.getElementById('templates-tab');
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-    }
-    
-    // Activate corresponding button
-    const activeButton = Array.from(buttons).find(btn => 
-        btn.textContent.toLowerCase().replace(' ', '-') === tabName
-    );
-    if (activeButton) {
-        activeButton.classList.add('active');
-    }
-}
 
-// Run ML Analysis
-function runMLAnalysis(analysisType) {
+// Legacy ML Analysis function - kept for compatibility
+function runMLAnalysisLegacy(analysisType) {
     if (!analysisResults) {
         alert('No analysis results available. Please upload and analyze a file first.');
         return;
@@ -556,12 +532,10 @@ async function runMLAnalysis(analysisType) {
     resultsDiv.innerHTML = '<div class="loading">Running ' + analysisType + ' analysis...</div>';
     
     try {
-        const formData = new FormData();
-        formData.append('type', analysisType);
-        
         const response = await fetch('/ml_analysis', {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ analysis_type: analysisType })
         });
         
         const result = await response.json();
@@ -644,21 +618,21 @@ async function generateReport(reportType) {
     resultsDiv.innerHTML = '<div class="loading">Generating ' + reportType + ' report...</div>';
     
     try {
-        const formData = new FormData();
-        formData.append('type', reportType);
-        formData.append('ai_engine', reportType.includes('ai') ? 'phi2' : 'basic');
-        
         const response = await fetch('/generate_report', {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                report_type: reportType,
+                ai_engine: reportType.includes('ai') ? 'phi2' : 'basic'
+            })
         });
         
         const result = await response.json();
         
-        if (result.success) {
+        if (result.success || result.status === 'success') {
             displayReportResults(result.report);
         } else {
-            resultsDiv.innerHTML = '<div class="error">Error: ' + result.message + '</div>';
+            resultsDiv.innerHTML = '<div class="error">Error: ' + (result.message || result.error) + '</div>';
         }
     } catch (error) {
         resultsDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
