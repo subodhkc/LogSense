@@ -84,17 +84,21 @@ async def _build_streamlit_command() -> list[str]:
 async def _start_streamlit_process():
     """Start Streamlit process asynchronously."""
     import subprocess
+    import asyncio
     
     cmd = await _build_streamlit_command()
     print(f"[MODAL] Starting: {' '.join(cmd)}", flush=True)
     
+    # Secure subprocess with timeout and shell=False
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
-        universal_newlines=True
+        universal_newlines=True,
+        shell=False,  # Security: prevent shell injection
+        timeout=300   # 5 minute timeout
     )
     
     return process

@@ -1,31 +1,41 @@
 # LogSense - Enterprise Log Analysis Platform
 
-A comprehensive log analysis tool designed for technical program managers, QA engineers, and support teams. LogSense helps you quickly analyze system logs from BIOS updates, software installations, imaging processes, and agent deployments to identify root causes of issues.
+LogSense is a comprehensive log analysis platform that combines traditional analytics with AI-powered insights for enterprise system troubleshooting and root cause analysis.
 
-## Key Features
+## Features
 
-**Smart Log Processing**
-- Upload ZIP files or individual log files with automatic parsing
-- Built-in error detection and pattern recognition
-- Timeline reconstruction and event correlation
-- Test plan validation against actual log events
+- **Multi-format Log Support**: Process .log, .txt files and .zip archives
+- **AI-Powered Analysis**: Local Phi-2 LLM and OpenAI integration for intelligent insights
+- **Interactive Dashboard**: Modern web interface with real-time analysis
+- **Template Extraction**: Automatic pattern recognition and log templating
+- **ML Insights**: Clustering, anomaly detection, and severity prediction
+- **Correlation Analysis**: Event relationship mapping and causal chain detection
+- **Report Generation**: Comprehensive PDF reports with AI summaries
+- **Modal Deployment**: Cloud-ready with GPU acceleration support
 
-**Advanced Analytics**
-- Machine learning-powered clustering and anomaly detection
-- Decision tree analysis for complex troubleshooting
-- Statistical correlation analysis across log sources
-- PII redaction with configurable privacy patterns
+## Architecture & Security
 
-**Professional Reporting**
-- Executive summary reports with key findings
-- Detailed technical analysis with charts and timelines
-- PDF export with corporate styling
-- Customizable report templates
+### System Architecture
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend/UI   │    │   Domain Logic  │    │ Infrastructure  │
+│                 │    │                 │    │                 │
+│ • HTML/CSS/JS   │───▶│ • Analysis      │───▶│ • HTTP Client   │
+│ • Accessibility │    │ • AI/ML         │    │ • File Storage  │
+│ • No inline JS  │    │ • Report Gen    │    │ • Async I/O     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │      Tests      │
+                       │                 │
+                       │ • Unit Tests    │
+                       │ • Integration   │
+                       │ • Security      │
+                       └─────────────────┘
+```
 
-**AI-Powered Insights**
-- Local AI model (Microsoft Phi-2) for offline analysis
-- Optional cloud AI integration for enhanced capabilities
-- Natural language explanations of technical issues
+### Security Posture
 
 ## [U+1F9F0] Getting Started
 

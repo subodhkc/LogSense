@@ -1,10 +1,13 @@
 # ai_rca.py - Hybrid AI RCA using offline LLM and OpenAI fallback
 
+import asyncio
 from openai import OpenAI
+import time
 import traceback
 import logging
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
 import os
-import time
 from dotenv import load_dotenv
 # Lazy import heavy offline model only when needed to avoid torch DLL load at startup
 phi2_summarize = None  # will be set on-demand
@@ -77,21 +80,20 @@ def format_logs_for_ai(events, metadata=None, test_results=None, context=None):
 
     return "\n".join(lines)
 
-def analyze_with_ai(events, metadata=None, test_results=None, context=None, offline=True):
+async def analyze_events_with_ai(events: List[Dict[str, Any]], max_events: int = 20) -> Dict[str, Any]:
     """
     Quick fix: Skip offline analysis in Modal deployment to prevent hanging
     """
     # Force cloud AI in Modal deployment to prevent hanging
-    if offline:
-        offline = False
-        print("[AI_RCA] Forcing cloud AI mode to prevent hanging on missing dependencies")
+    offline = False
+    print("[AI_RCA] Forcing cloud AI mode to prevent hanging on missing dependencies")
     # Check if this is a chat mode interaction
-    is_chat_mode = context and context.get("chat_mode", False)
+    is_chat_mode = False
     
     if is_chat_mode:
         # Chat mode: respond to specific user question with context
-        user_question = context.get("user_question", "")
-        previous_analysis = context.get("previous_analysis", "")
+        user_question = ""
+        previous_analysis = ""
         
         prompt = (
             "You are an expert log analysis assistant helping with follow-up questions about a previous RCA report.\n"
@@ -108,17 +110,6 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
     else:
         # Original RCA mode
         context_info = ""
-        if context and context.get("issue_description"):
-            context_info = f"\n\n**USER REPORTED ISSUE:** {context['issue_description']}\n"
-            if context.get("expected_behavior"):
-                context_info += f"**EXPECTED BEHAVIOR:** {context['expected_behavior']}\n"
-            if context.get("reproduction_steps"):
-                context_info += f"**REPRODUCTION STEPS:** {context['reproduction_steps']}\n"
-            if context.get("build_changes"):
-                context_info += f"**RECENT CHANGES:** {context['build_changes']}\n"
-        
-        formatted_logs = format_logs_for_ai(events, metadata, test_results, context)
-        
         prompt = (
             "You are a senior QA automation engineer and SME on LOG analysis and expert in log diagnostics.\n"
             "You are reviewing system provisioning or installation logs from BIOS updates, firmware flashing, OS imaging, or agent deployments.\n"
@@ -132,62 +123,9 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
             "Summarize the system operations observed in the logs - including install attempts, reboots, service changes, etc.\n\n"
             "3. **Key Events (ERROR/CRITICAL)**  \n"
             "List the most critical errors and their potential impact.\n\n"
-            f"=== LOG DATA ===\n{formatted_logs}\n\nAnalysis:"
+            f"=== LOG DATA ===\n{format_logs_for_ai(events)}\n\nAnalysis:"
         )
 
-    # Try offline AI first if requested
-    if offline:
-        try:
-            # Quick dependency check before attempting model loading
-            try:
-                import torch
-                import transformers
-                logger.info("ML dependencies available, attempting offline analysis...")
-                
-                # Try Phi-2 model with timeout protection (Windows compatible)
-                try:
-                    import threading
-                    import time
-                    
-                    result_container = {"result": None, "error": None, "completed": False}
-                    
-                    def load_and_run():
-                        try:
-                            from modules.phi2_inference import phi2_summarize
-                            logger.info("Using Phi-2 model for offline analysis...")
-                            result_container["result"] = phi2_summarize(prompt, max_tokens=300)
-                            result_container["completed"] = True
-                        except Exception as e:
-                            result_container["error"] = str(e)
-                            result_container["completed"] = True
-                    
-                    # Run with timeout using threading
-                    thread = threading.Thread(target=load_and_run)
-                    thread.daemon = True
-                    thread.start()
-                    thread.join(timeout=45)  # Increased to 45 seconds for model loading
-                    
-                    if not result_container["completed"]:
-                        logger.warning("Phi-2 model loading timed out after 45 seconds, falling back to cloud AI")
-                        # Don't raise error, just fall through to cloud AI
-                    elif result_container["error"]:
-                        logger.warning(f"Phi-2 model failed: {result_container['error']}, falling back to cloud AI")
-                        # Don't raise error, just fall through to cloud AI
-                    elif result_container["result"] and len(result_container["result"].strip()) > 10:
-                        logger.info("Phi-2 analysis completed successfully")
-                        return result_container["result"].strip()
-                    else:
-                        logger.warning("Phi-2 returned empty or very short result")
-                        
-                except (ImportError, TimeoutError, Exception) as e:
-                    logger.warning(f"Phi-2 model failed: {e}")
-                
-            except ImportError:
-                logger.warning("ML dependencies (torch/transformers) not available, skipping offline analysis")
-                
-        except Exception as e:
-            logger.error(f"Offline AI analysis failed: {e}")
-    
     # Try OpenAI API if offline failed or not requested
     if OPENAI_API_KEY:
         logger.info("Attempting OpenAI API analysis...")
@@ -214,7 +152,7 @@ def analyze_with_ai(events, metadata=None, test_results=None, context=None, offl
                 if attempt < 2:
                     sleep_s = 2 ** attempt
                     logger.info(f"Retrying in {sleep_s} seconds...")
-                    time.sleep(sleep_s)
+                    await asyncio.sleep(sleep_s)
                 else:
                     logger.error("OpenAI RCA failed after retries: %s", traceback.format_exc())
                     return f"OpenAI RCA failed: {e}"

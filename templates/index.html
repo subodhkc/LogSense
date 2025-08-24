@@ -112,7 +112,7 @@
                     <span class="expand-icon">▼</span>
                 </div>
                 <div class="upload-container">
-                    <div class="upload-area-large" onclick="document.getElementById('file-input').click()">
+                    <div class="upload-area-large" id="upload-area">
                         <div class="upload-button">UPLOAD</div>
                         <div class="upload-text">Upload Log Files (ZIP recommended)</div>
                         <div class="upload-subtext">Upload a ZIP file containing multiple logs, or individual log files</div>
@@ -198,7 +198,7 @@
                         </div>
                 </div>
                 
-                <button type="button" class="btn btn-apply" onclick="applyContext()">Apply / Update</button>
+                <button type="button" class="btn btn-apply" id="apply-context-btn">Apply / Update</button>
             </div>
             
             <!-- Analysis Results -->
@@ -209,10 +209,10 @@
                 <!-- Tabs for Analysis -->
                 <div class="tabs">
                     <div class="tab-buttons">
-                        <button class="tab-button active" onclick="showTab('templates')">Templates</button>
-                        <button class="tab-button" onclick="showTab('ml')">ML Insights</button>
-                        <button class="tab-button" onclick="showTab('correlations')">Correlations</button>
-                        <button class="tab-button" onclick="showTab('reports')">Reports</button>
+                        <button class="tab-button active" data-tab="templates">Templates</button>
+                        <button class="tab-button" data-tab="ml">ML Insights</button>
+                        <button class="tab-button" data-tab="correlations">Correlations</button>
+                        <button class="tab-button" data-tab="reports">Reports</button>
                     </div>
                     
                     <div class="tab-content active" id="templates-tab">
@@ -232,9 +232,9 @@
                             <p>Use machine learning to uncover hidden patterns: clustering, anomaly detection, and severity prediction.</p>
                         </div>
                         <div class="ml-buttons">
-                            <button class="btn btn-primary" onclick="runMLAnalysis('clustering')">Run Clustering</button>
-                            <button class="btn btn-primary" onclick="runMLAnalysis('severity')">Severity Prediction</button>
-                            <button class="btn btn-primary" onclick="runMLAnalysis('anomaly')">Anomaly Detection</button>
+                            <button class="btn btn-primary" data-analysis="clustering">Run Clustering</button>
+                            <button class="btn btn-primary" data-analysis="severity">Severity Prediction</button>
+                            <button class="btn btn-primary" data-analysis="anomaly">Anomaly Detection</button>
                         </div>
                         <div id="ml-results"></div>
                     </div>
@@ -246,9 +246,9 @@
                             <p>Analyze relationships between events, identify causal chains, and detect patterns across different log sources.</p>
                         </div>
                         <div class="correlation-buttons">
-                            <button class="btn btn-primary" onclick="runCorrelationAnalysis('temporal')">Temporal Correlations</button>
-                            <button class="btn btn-primary" onclick="runCorrelationAnalysis('causal')">Causal Chain Analysis</button>
-                            <button class="btn btn-primary" onclick="runCorrelationAnalysis('cross-source')">Cross-Source Analysis</button>
+                            <button class="btn btn-primary" data-correlation="temporal">Temporal Correlations</button>
+                            <button class="btn btn-primary" data-correlation="causal">Causal Chain Analysis</button>
+                            <button class="btn btn-primary" data-correlation="cross-source">Cross-Source Analysis</button>
                         </div>
                         <div id="correlations-content"></div>
                         <div id="correlation-results"></div>
@@ -265,9 +265,9 @@
                         </div>
                         
                         <div class="report-buttons">
-                            <button class="btn btn-secondary" onclick="generateReport('standard')">Standard Report</button>
-                            <button class="btn btn-primary" onclick="generateReport('local_ai')">Local AI Report</button>
-                            <button class="btn btn-primary" onclick="generateReport('cloud_ai')">Cloud AI Report</button>
+                            <button class="btn btn-secondary" data-report="standard">Standard Report</button>
+                            <button class="btn btn-primary" data-report="local_ai">Local AI Report</button>
+                            <button class="btn btn-primary" data-report="cloud_ai">Cloud AI Report</button>
                         </div>
                         
                         <div id="report-results"></div>

@@ -1,0 +1,23 @@
+# Development and testing dependencies
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+bandit>=1.7.5
+pip-audit>=2.6.0
+
+# Additional dev tools
+jupyter>=1.0.0
+ipython>=8.0.0
+pre-commit>=3.0.0
+
+# Modal deployment
+modal>=0.63.0
+
+# Security scanning
+safety>=2.3.0
+
+# Web framework already in requirements.txt
+isort>=5.12.0

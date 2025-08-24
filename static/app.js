@@ -9,9 +9,62 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFileUpload();
     setupExpanders();
     setupTabs();
+    setupEventListeners();
     generateSessionId();
     updateSidebarMetrics();
 });
+
+// Setup event listeners for accessibility
+function setupEventListeners() {
+    // Upload area click handler
+    const uploadArea = document.getElementById('upload-area');
+    if (uploadArea) {
+        uploadArea.addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+        uploadArea.setAttribute('role', 'button');
+        uploadArea.setAttribute('tabindex', '0');
+        uploadArea.setAttribute('aria-label', 'Click to upload log files');
+    }
+
+    // Apply context button
+    const applyBtn = document.getElementById('apply-context-btn');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', applyContext);
+    }
+
+    // Tab buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const tabName = e.target.getAttribute('data-tab');
+            if (tabName) showTab(tabName);
+        });
+    });
+
+    // ML analysis buttons
+    document.querySelectorAll('[data-analysis]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const analysisType = e.target.getAttribute('data-analysis');
+            if (analysisType) runMLAnalysis(analysisType);
+        });
+    });
+
+    // Correlation analysis buttons
+    document.querySelectorAll('[data-correlation]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const correlationType = e.target.getAttribute('data-correlation');
+            if (correlationType) runCorrelationAnalysis(correlationType);
+        });
+    });
+
+    // Report generation buttons
+    document.querySelectorAll('[data-report]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const reportType = e.target.getAttribute('data-report');
+            if (reportType) generateReport(reportType);
+        });
+    });
+}
 
 // Generate session ID
 function generateSessionId() {

@@ -225,11 +225,14 @@ def async_app():
     
     @web_app.post("/analyze")
     async def analyze_logs(request: Request):
-        """Perform async log analysis."""
+        """Perform async log analysis - JSON-only endpoint."""
         try:
             current_data = session_cache.get("current")
             if not current_data:
-                return _create_error_response("No file uploaded. Please upload a log file first.", 400)
+                return JSONResponse({
+                    "success": False,
+                    "message": "No file uploaded. Please upload a log file first."
+                }, status_code=400)
             
             events = current_data.get("events", [])
             if not events:

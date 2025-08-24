@@ -1,0 +1,14 @@
+# Modal deployment requirements - GPU functions only
+modal>=0.63.0
+torch>=2.0.0,<2.5.0
+torch-audio>=2.0.0,<2.5.0
+transformers>=4.30.0,<5.0.0
+accelerate>=0.33.0
+sentencepiece>=0.2.0
+fastapi[standard]>=0.104.0
+httpx>=0.24.0
+aiofiles>=23.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+cryptography>=43.0.0
+certifi>=2024.8.30
