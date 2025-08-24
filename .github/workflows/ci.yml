@@ -18,10 +18,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Security scanning
+      - name: Run security audit
         run: |
-          pip-audit --desc --format=json --output=security-report.json || true
+          pip-audit --desc --format=json --output=audit-report.json || true
           bandit -r . -f json -o bandit-report.json || true
+      - name: Generate SBOM
+        run: |
+          cyclonedx-py requirements requirements.txt -o sbom.json
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: compliance-reports
+          path: |
+            audit-report.json
+            bandit-report.json
+            sbom.json
       - name: Unit tests
         run: pytest -q
       - name: Inference smoke

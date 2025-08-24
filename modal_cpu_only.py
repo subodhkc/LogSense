@@ -32,15 +32,24 @@ def cpu_app():
     """CPU-only FastAPI app - no torch imports."""
     import sys
     sys.path.insert(0, '/root/app')
-    
-    from fastapi import FastAPI, File, UploadFile, Request
+    import os
+    import asyncio
+    from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
     from fastapi.responses import HTMLResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.templating import Jinja2Templates
     from infra.http import AsyncHTTPClient
     from infra.storage import read_text_file, create_temp_file, cleanup_temp_file
+    from infra.security import add_security_headers, add_cors_middleware, validate_content_type, validate_file_upload, ErrorCodes
+    from infra.error_handler import GlobalErrorHandler, setup_logging, SecureLogger
     
     web_app = FastAPI(title="LogSense CPU - Basic Analysis", version="1.0.0")
+    
+    # Setup security and error handling
+    setup_logging()
+    add_security_headers(web_app)
+    add_cors_middleware(web_app)
+    GlobalErrorHandler(web_app)
     
     # Mount static files and templates
     web_app.mount("/static", StaticFiles(directory="/root/app/static"), name="static")
@@ -48,6 +57,7 @@ def cpu_app():
     
     # Session cache
     session_cache: Dict[str, Any] = {}
+    logger = SecureLogger(__name__)
     
     @web_app.get("/", response_class=HTMLResponse)
     async def home(request: Request):
@@ -66,79 +76,110 @@ def cpu_app():
         }
     
     @web_app.post("/upload")
-    async def upload_file(file: UploadFile = File(...)):
-        """CPU-only file upload and basic analysis."""
+    async def upload_file(request: Request, file: UploadFile = File(...), context: str = Form("")):
+        """Handle file upload - CPU only basic parsing."""
         try:
-            # Validate file
-            if not file.filename or not file.filename.endswith(('.log', '.txt')):
-                return JSONResponse({
-                    "success": False,
-                    "message": "Invalid file type. Supported: .log, .txt"
-                }, status_code=400)
-            
-            # Read file content
+            # Validate file upload
             content = await file.read()
-            text_content = content.decode('utf-8', errors='ignore')
+            validate_file_upload(content, file.filename)
             
-            # Basic CPU analysis - no ML
-            events = _parse_basic_events(text_content, file.filename)
-            analysis = _basic_cpu_analysis(events)
+            logger.info(f"File upload started: {file.filename}")
             
-            # Store in cache
-            session_cache["current"] = {
-                "events": events[:50],  # Limit for CPU
-                "analysis": analysis,
-                "filename": file.filename,
-                "upload_time": datetime.now().isoformat()
+            # Create temp file for processing
+            temp_path = await create_temp_file(content, file.filename)
+            
+            try:
+                # Basic log parsing without ML
+                from analysis import parse_log_file
+                events = parse_log_file(temp_path)
+                
+                # Store in session cache
+                session_id = f"cpu_session_{len(session_cache)}"
+                session_cache[session_id] = {
+                    "events": events[:100],  # Limit for CPU
+                    "filename": file.filename,
+                    "context": context
+                }
+                
+                logger.info(f"File processed successfully: {len(events)} events found")
+                
+                return {
+                    "success": True,
+                    "session_id": session_id,
+                    "events_found": len(events),
+                    "message": "File processed successfully (CPU-only mode)"
+                }
+                
+            finally:
+                await cleanup_temp_file(temp_path)
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Upload failed: {str(e)}")
+            raise HTTPException(
+                status_code=500, 
+                detail={
+                    "error_code": ErrorCodes.PROCESSING_FAILED,
+                    "message": "File upload failed"
+                }
+            )
+    
+    @web_app.post("/analyze")
+    async def analyze_logs(request: Request):
+        """Basic log analysis without ML."""
+        try:
+            validate_content_type(request, "application/json")
+            data = await request.json()
+            session_id = data.get("session_id")
+            
+            if not session_id or session_id not in session_cache:
+                raise HTTPException(
+                    status_code=404, 
+                    detail={
+                        "error_code": ErrorCodes.PROCESSING_FAILED,
+                        "message": "Session not found"
+                    }
+                )
+            
+            session_data = session_cache[session_id]
+            events = session_data["events"]
+            
+            # Basic analysis without ML
+            analysis_result = {
+                "total_events": len(events),
+                "event_types": {},
+                "severity_distribution": {},
+                "sample_events": events[:5]
             }
             
-            return JSONResponse({
+            # Count event types and severities
+            for event in events:
+                event_type = event.get("type", "unknown")
+                severity = event.get("severity", "info")
+                
+                analysis_result["event_types"][event_type] = analysis_result["event_types"].get(event_type, 0) + 1
+                analysis_result["severity_distribution"][severity] = analysis_result["severity_distribution"].get(severity, 0) + 1
+            
+            logger.info(f"Analysis completed for session {session_id}")
+            
+            return {
                 "success": True,
-                "message": f"File processed. Found {len(events)} events.",
-                "event_count": len(events),
-                "analysis": analysis
-            })
+                "analysis": analysis_result,
+                "message": "Basic analysis complete (CPU-only mode)"
+            }
             
+        except HTTPException:
+            raise
         except Exception as e:
-            return JSONResponse({
-                "success": False,
-                "message": f"Upload failed: {str(e)}"
-            }, status_code=500)
-    
-    @web_app.post("/submit_context")
-    async def submit_context(request: Request):
-        """Handle context submission."""
-        try:
-            data = await request.json()
-            current_data = session_cache.get("current", {})
-            current_data["context"] = data
-            session_cache["current"] = current_data
-            
-            return JSONResponse({
-                "status": "success",
-                "message": "Context saved"
-            })
-        except Exception as e:
-            return JSONResponse({
-                "status": "error",
-                "message": str(e)
-            }, status_code=500)
-    
-    def _parse_basic_events(content: str, filename: str):
-        """Basic event parsing without heavy dependencies."""
-        events = []
-        lines = content.split('\n')
-        
-        for i, line in enumerate(lines[:1000]):  # Limit for CPU
-            if line.strip():
-                events.append({
-                    "line_number": i + 1,
-                    "content": line.strip(),
-                    "filename": filename,
-                    "level": _guess_log_level(line)
-                })
-        
-        return events
+            logger.error(f"Analysis failed: {str(e)}")
+            raise HTTPException(
+                status_code=500, 
+                detail={
+                    "error_code": ErrorCodes.PROCESSING_FAILED,
+                    "message": "Analysis failed"
+                }
+            )
     
     def _guess_log_level(line: str):
         """Simple log level detection."""

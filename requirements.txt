@@ -16,7 +16,7 @@ pyyaml>=6.0.1
 httpx>=0.25.0
 aiofiles>=23.0.0
 jinja2>=3.1.0
-python-multipart>=0.0.18
+python-multipart==0.0.9
 
 # AI/ML dependencies (optional)
 openai>=1.0.0

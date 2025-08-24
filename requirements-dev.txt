@@ -18,6 +18,11 @@ modal>=0.63.0
 
 # Security scanning
 safety>=2.3.0
+pip-audit>=2.6.0
+bandit>=1.7.0
+cyclonedx-bom>=7.0.0
 
-# Web framework already in requirements.txt
+# Web framework for testing
+python-multipart==0.0.9
+streamlit>=1.28.0
 isort>=5.12.0

@@ -37,6 +37,60 @@ LogSense is a comprehensive log analysis platform that combines traditional anal
 
 ### Security Posture
 
+#### Async I/O Implementation
+- All file operations use `aiofiles` for non-blocking I/O
+- HTTP requests use `httpx.AsyncClient` with retry logic
+- Replaced `time.sleep()` with `asyncio.sleep()` throughout
+
+#### HTTP and File Safety Wrappers
+- `infra/http.py`: Async HTTP client with timeout and error handling
+- `infra/storage.py`: Safe file operations with cleanup and validation
+- `infra/security.py`: Content-Type validation, CORS, security headers
+- `infra/error_handler.py`: Global error handling with standardized codes
+
+#### Security Features
+- Input validation and XSS protection on all user inputs
+- Secure subprocess calls with `shell=False` and timeouts
+- No dangerous primitives (unsafe tarfile, raw XML-RPC, MD5/SHA1 for security)
+- Defensive imports and probes for GPU availability
+- Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options
+- CORS allowlist (no wildcard origins)
+- Request size limits (25MB uploads, 1MB JSON)
+
+#### Data Handling and Compliance
+**Input Processing**
+- File uploads limited to `.log`, `.txt`, `.zip` formats
+- Maximum file size: 25MB per upload
+- Content-Type validation enforced on all endpoints
+- Input sanitization prevents XSS and injection attacks
+
+**Storage and Retention**
+- Temporary files created in system temp directory
+- Automatic cleanup after processing completion or errors
+- No persistent storage of user data beyond session cache
+- Session data cleared on container restart
+
+**Data Export and Redaction**
+- Sensitive data (tokens, emails, passwords) redacted from logs
+- Error responses use standardized codes (E.REQ.001, E.SRV.001, etc.)
+- No stack traces exposed to clients
+- SBOM (Software Bill of Materials) generated for compliance
+
+**Error Code Taxonomy**
+- **E.REQ.xxx**: Client request errors (invalid content-type, file too large)
+- **E.SRV.xxx**: Server processing errors (analysis failed, storage error)
+- **E.SEC.xxx**: Security-related errors (unauthorized, rate limited)
+
+#### Quality Gates
+- CI pipeline includes security scanning (pip-audit, bandit)
+- SBOM generation for license compliance
+- Pytest configuration excludes non-test files
+- All tests pass with strict collection rules
+
+#### ADRs (Architectural Decision Records)
+- **ADR-001**: Async I/O & httpx choice for performance and scalability
+- **ADR-002**: Schema validation at input boundaries for security and reliability
+
 ## [U+1F9F0] Getting Started
 
 ### Installation
