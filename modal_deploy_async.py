@@ -41,6 +41,18 @@ def async_app():
         print("[PIP_FREEZE_HEAD]\n" + out[:2000])
         raise
 
+    # Initialize Cascade logger for troubleshooting
+    try:
+        from infra.cascade_logging import get_cascade_logger
+        cascade_logger = get_cascade_logger("prod_app")
+        cascade_logger.info("Production application starting up.")
+    except ImportError:
+        print("[WARNING] Cascade logger not found, proceeding without it.")
+        class FakeLogger:
+            def info(self, *args, **kwargs): pass
+            def error(self, *args, **kwargs): pass
+        cascade_logger = FakeLogger()
+
     # Create minimal FastAPI app - NO CORS to avoid extra dependencies
     api = FastAPI(title="LogSense Enterprise", version="1.0.0")
 
@@ -108,6 +120,9 @@ def async_app():
             import re
             safe_filename = re.sub(r'[<>:"|?*]', '', file.filename)
             safe_filename = safe_filename.replace('..', '').strip()
+
+            # Cascade logging
+            cascade_logger.info(f"Processing upload for file: {safe_filename}, size: {len(content)} bytes, content-type: {content_type}")
 
             # Parse log content with fallback
             try:
@@ -226,7 +241,9 @@ def async_app():
 
         except Exception as e:
             error_id = f"ERR-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-            print(f"[ERROR] Upload failed - ID: {error_id}, Error: {str(e)}")
+            # Use repr(e) for more detailed error logging
+            print(f"[ERROR] Upload failed - ID: {error_id}, Error: {e!r}")
+            cascade_logger.error(f"Upload failed for error_id: {error_id}. Exception: {e!r}")
 
             return JSONResponse({
                 "success": False,

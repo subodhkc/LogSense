@@ -42,6 +42,18 @@ def web_http():
     from analysis import parse_log_file
     from analyzer.baseline_analyzer import analyze_events
 
+    # Initialize Cascade logger for troubleshooting
+    try:
+        from infra.cascade_logging import get_cascade_logger
+        cascade_logger = get_cascade_logger("staging_app")
+        cascade_logger.info("Staging application starting up.")
+    except ImportError:
+        print("[WARNING] Cascade logger not found, proceeding without it.")
+        class FakeLogger:
+            def info(self, *args, **kwargs): pass
+            def error(self, *args, **kwargs): pass
+        cascade_logger = FakeLogger()
+
     api = FastAPI(title="LogSense Staging", version="3.0.0")
 
     api.mount("/static", StaticFiles(directory="/root/app/static"), name="static")
@@ -63,7 +75,10 @@ def web_http():
 
         content = await file.read()
         if not any(file.filename.lower().endswith(ext) for ext in ['.log', '.txt', '.zip']):
+            cascade_logger.error(f"Invalid file upload attempt: {file.filename}")
             return JSONResponse({"status": "error", "message": "Invalid file extension"}, status_code=400)
+
+        cascade_logger.info(f"Processing upload for file: {file.filename}")
 
         events = []
         # This logic is simplified for brevity but should mirror production
