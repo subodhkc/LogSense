@@ -14,6 +14,13 @@ PORT = 8000
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .add_local_dir(".", remote_path="/root/app")
+    # Explicitly install FastAPI stack to avoid missing modules if constraints
+    # file is not visible for any reason during build caching.
+    .pip_install(
+        "fastapi[standard]==0.116.1",
+        "uvicorn==0.30.6",
+        "python-multipart==0.0.20"
+    )
     .pip_install_from_requirements("/root/app/requirements-modal-gpu.txt")
     .env({
         "MODEL_BACKEND": "phi2",
