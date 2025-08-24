@@ -6,22 +6,23 @@ from datetime import datetime
 
 app = modal.App("logsense-web-v3")
 
-# Clean web image with explicit FastAPI stack pins
+# Force new container build with version bump and cache buster
 web_image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "fastapi==0.115.2",
-        "starlette==0.38.3", 
+        "fastapi==0.115.3",  # Bumped to force rebuild
+        "starlette==0.38.4",  # Bumped to force rebuild
         "uvicorn==0.30.6",
         "pydantic==2.8.2",
         "python-multipart==0.0.9",
         "jinja2==3.1.4",
         "aiofiles==24.1.0"
     )
+    .run_commands("echo 'CACHE_BUST_20250824_1710' > /tmp/cache_bust.txt")  # Force layer rebuild
     .add_local_dir(".", remote_path="/root/app")
 )
 
-WEB_V3_CANARY = f"WEB_V3_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+WEB_V3_CANARY = "WEB_V3_REBUILD_20250824_1710_FASTAPI_0115_3"
 
 # Diagnostic function to verify FastAPI presence
 @app.function(image=web_image, name="web-diag")

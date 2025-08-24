@@ -4,22 +4,23 @@ from datetime import datetime
 
 app = modal.App("logsense-async")  # keep app name; keep URL domain stable
 
-# Clean web image with explicit FastAPI stack pins (same as working modal_web_v3.py)
+# Force new container build with version bump and cache buster
 web_image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "fastapi==0.115.2",
-        "starlette==0.38.3",
+        "fastapi==0.115.3",  # Bumped to force rebuild
+        "starlette==0.38.4",  # Bumped to force rebuild
         "uvicorn==0.30.6",
         "pydantic==2.8.2",
         "python-multipart==0.0.9",
         "jinja2==3.1.4",
         "aiofiles==24.1.0"
     )
+    .run_commands("echo 'CACHE_BUST_20250824_1710' > /tmp/cache_bust.txt")  # Force layer rebuild
     .add_local_dir(".", remote_path="/root/app")
 )
 
-ASYNC_CANARY = f"ASYNC_MIRROR_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+ASYNC_CANARY = "ASYNC_REBUILD_20250824_1710_FASTAPI_0115_3"
 
 # Bind the exact endpoint you're hitting: function name must be "async-app"
 @app.function(image=web_image, name="async-app")
