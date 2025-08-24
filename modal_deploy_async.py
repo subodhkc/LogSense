@@ -24,7 +24,8 @@ image = (
     .pip_install_from_requirements("/root/app/requirements-modal-gpu.txt")
     .env({
         "MODEL_BACKEND": "phi2",
-        "DISABLE_ML_MODELS": "false",
+        "DISABLE_ML_MODELS": "true",   # default to disabled to prevent startup hangs
+        "ENABLE_GPU_LLM": "false",     # opt-in flag to load GPU LLM on startup
         "PYTHONPATH": "/root/app",
         "APP_REV": os.environ.get("GITHUB_SHA", "local")
     })
@@ -104,24 +105,30 @@ def async_app():
     # GPU-optimized LLM functions
     @web_app.on_event("startup")
     async def load_llm_model():
-        """Load Phi-2 model on GPU at startup for faster inference."""
+        """Optionally load Phi-2 model. Disabled by default to avoid cold-start timeouts."""
         try:
+            import os as _os
+            if _os.getenv("ENABLE_GPU_LLM", "false").lower() != "true":
+                print("[GPU] Skipping LLM load on startup (ENABLE_GPU_LLM=false)")
+                return
+
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
-            
-            if torch.cuda.is_available():
-                print("[GPU] Loading Phi-2 model on GPU...")
-                global phi2_model, phi2_tokenizer
-                phi2_model = AutoModelForCausalLM.from_pretrained(
-                    "microsoft/phi-2",
-                    torch_dtype=torch.float16,
-                    device_map="auto",
-                    trust_remote_code=True
-                )
-                phi2_tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2", trust_remote_code=True)
-                print("[GPU] Phi-2 model loaded successfully")
-            else:
-                print("[CPU] GPU not available, LLM will use CPU fallback")
+
+            if not torch.cuda.is_available():
+                print("[CPU] GPU not available; skipping GPU LLM load")
+                return
+
+            print("[GPU] Loading Phi-2 model on GPU...")
+            global phi2_model, phi2_tokenizer
+            phi2_model = AutoModelForCausalLM.from_pretrained(
+                "microsoft/phi-2",
+                torch_dtype=torch.float16,
+                device_map="auto",
+                trust_remote_code=True
+            )
+            phi2_tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2", trust_remote_code=True)
+            print("[GPU] Phi-2 model loaded successfully")
         except Exception as e:
             print(f"[ERROR] Failed to load LLM model: {e}")
     
