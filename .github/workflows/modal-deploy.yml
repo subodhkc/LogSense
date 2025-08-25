@@ -114,7 +114,7 @@ jobs:
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           . .venv/bin/activate
-          modal deploy modal_deploy_async.py
+          modal deploy modal_native_gpu.py
 
       - name: Sanity check (production)
         if: success() && (!env.REQUIRE_DEPLOY_TAG || contains(github.event.head_commit.message, env.DEPLOY_TAG))
