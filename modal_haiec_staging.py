@@ -32,11 +32,11 @@ analysis_cache = {}
 @app.function(
     image=staging_image, 
     name=FUNCTION_NAME,
+    serialized=True,
     timeout=180,  # 3 minutes for staging
     memory=1024,  # 1GB for staging
     min_containers=0,  # Scale to zero for staging
-    scaledown_window=300,  # 5 minutes
-    retries=modal.Retries(max_retries=0)
+    scaledown_window=300  # 5 minutes
 )
 @modal.asgi_app()
 def web_app():

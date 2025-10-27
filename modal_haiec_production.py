@@ -20,7 +20,6 @@ production_image = (
     .pip_install(
         "fastapi==0.116.1",
         "uvicorn[standard]==0.30.6", 
-        "starlette>=0.37.2,<0.39.0",
         "pydantic>=2.7.4,<3",
         "python-multipart==0.0.20",
         "jinja2>=3.1.0",
@@ -49,11 +48,11 @@ analysis_cache = {}
 @app.function(
     image=production_image,
     name=FUNCTION_NAME,
+    serialized=True,
     timeout=300,  # 5 minutes
     memory=2048,  # 2GB
     min_containers=1,  # Warm containers for production
-    scaledown_window=600,  # 10 minutes
-    retries=modal.Retries(max_retries=0)
+    scaledown_window=600  # 10 minutes
 )
 @modal.asgi_app()
 def web_app():
