@@ -36,8 +36,8 @@ production_image = (
         "numpy>=1.24.0"
     )
     .add_local_dir(".", remote_path="/root/app")
-    .run_commands("python -c 'import fastapi; print(f\"FastAPI {fastapi.__version__} ready for production\")'")
     .run_commands("python -c 'import sys; print(f\"Python path: {sys.path}\")'")
+    .run_commands("python -c 'import pkgutil; print(f\"Web framework available: {pkgutil.find_loader(\\\"fastapi\\\") is not None}\")'")
 )
 
 # Initialize Modal app
@@ -62,7 +62,7 @@ def web_app():
     # Runtime verification
     import platform, pkgutil
     print(f"[PRODUCTION_STARTUP] app='{APP_NAME}' func='{FUNCTION_NAME}' py={platform.python_version()}")
-    print(f"[DEPENDENCIES] fastapi={pkgutil.find_loader('fastapi') is not None}")
+    print(f"[DEPENDENCIES] web_framework={pkgutil.find_loader('fastapi') is not None}")
     
     # Import FastAPI stack
     from fastapi import FastAPI, File, UploadFile, Request, Form

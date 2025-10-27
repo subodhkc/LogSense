@@ -57,7 +57,7 @@ jobs:
               print(f"FAIL: expected exactly one @modal.asgi_app() in {prod_entry}"); sys.exit(1)
           if re.search(r'@app\.function\([^)]*gpu=', p):
               print(f"FAIL: web ASGI in {prod_entry} must not request GPU"); sys.exit(1)
-          if re.search(r'^\s*from\s+fastapi\s+import|^\s*import\s+fastapi', p, flags=re.M):
+          if re.search(r'^from\s+fastapi\s+import|^import\s+fastapi', p, flags=re.M):
               print(f"FAIL: fastapi imported at top level in {prod_entry}; must be inside ASGI function"); sys.exit(1)
           # Check staging entry point
           staging_entry = pathlib.Path("modal_haiec_staging.py")
