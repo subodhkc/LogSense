@@ -15,7 +15,7 @@ from constants import (
 )
 
 # Configuration
-APP_NAME = "logsense-economical"
+APP_NAME = "logsense-economical-disabled-OLD"  # Disabled - use modal_haiec_production.py instead
 PORT = DEFAULT_PORT
 
 # Create Modal image with async dependencies (ensure requirements file is present first)

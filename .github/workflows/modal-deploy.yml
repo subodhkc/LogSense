@@ -49,7 +49,7 @@ jobs:
           python - << 'PY'
           import pathlib, re, sys
           # Check production entry point
-          prod_entry = pathlib.Path("modal_deploy_async.py")
+          prod_entry = pathlib.Path("modal_haiec_production.py")
           if not prod_entry.exists():
               print(f"FAIL: Production entry point {prod_entry} not found."); sys.exit(1)
           p = prod_entry.read_text(encoding="utf-8", errors="ignore")
@@ -60,7 +60,7 @@ jobs:
           if re.search(r'^\s*from\s+fastapi\s+import|^\s*import\s+fastapi', p, flags=re.M):
               print(f"FAIL: fastapi imported at top level in {prod_entry}; must be inside ASGI function"); sys.exit(1)
           # Check staging entry point
-          staging_entry = pathlib.Path("modal_staging.py")
+          staging_entry = pathlib.Path("modal_haiec_staging.py")
           if not staging_entry.exists():
               print(f"FAIL: Staging entry point {staging_entry} not found."); sys.exit(1)
           # Check for security signatures across the entire codebase
@@ -84,11 +84,11 @@ jobs:
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           . .venv/bin/activate
-          modal deploy modal_staging.py
+          modal deploy modal_haiec_staging.py
 
       - name: Smoke tests (staging)
         env:
-          BASE_URL: https://haiec--logsense-web-v3-web-http.modal.run
+          BASE_URL: https://haiec--logsense-staging-web-app.modal.run
         run: |
           set -euo pipefail
           sleep 15 # Wait for app to be available
@@ -114,12 +114,12 @@ jobs:
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           . .venv/bin/activate
-          modal deploy modal_native_gpu.py
+          modal deploy modal_haiec_production.py
 
       - name: Sanity check (production)
         if: success() && (!env.REQUIRE_DEPLOY_TAG || contains(github.event.head_commit.message, env.DEPLOY_TAG))
         env:
-          BASE_URL: https://haiec--logsense-economical-economical-app.modal.run
+          BASE_URL: https://haiec--logsense-production-web-app.modal.run
         run: |
           set -euo pipefail
           sleep 15 # Wait for app to be available

@@ -2,7 +2,7 @@
 import modal
 from datetime import datetime
 
-app = modal.App("logsense-economical-disabled-async")  # Disabled to prevent conflict with GPU deployment
+app = modal.App("logsense-economical-disabled-async-OLD")  # Disabled - use modal_haiec_production.py instead
 
 # Minimal FastAPI-first image - install FastAPI FIRST and ONLY
 web_image = (

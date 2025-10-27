@@ -2,7 +2,7 @@
 import modal
 
 # Staging App Name
-app = modal.App("logsense-web-v3")
+app = modal.App("logsense-web-v3-disabled-OLD")  # Disabled - use modal_haiec_staging.py instead
 
 # Minimal web image with explicit FastAPI pins
 web_image = (
