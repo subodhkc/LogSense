@@ -184,6 +184,7 @@ QUANTIZATION=4bit           # Memory optimization
 2. **Upload ZIP files** - Faster processing of multiple log files
 3. **Review redaction** - Check privacy settings before enabling cloud AI
 4. **Export reports** - Generate PDF summaries for stakeholders
+# Triggered Modal auto-deploy at <current date/time>
 
 ---
 
