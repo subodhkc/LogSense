@@ -30,10 +30,14 @@ production_image = (
         "pyyaml>=6.0.1",
         "openai>=1.0.0",
         "cryptography>=43.0.0",
-        "certifi>=2024.8.30"
+        "certifi>=2024.8.30",
+        # Additional dependencies for LogSense
+        "pandas>=2.0.0",
+        "numpy>=1.24.0"
     )
     .add_local_dir(".", remote_path="/root/app")
     .run_commands("python -c 'import fastapi; print(f\"FastAPI {fastapi.__version__} ready for production\")'")
+    .run_commands("python -c 'import sys; print(f\"Python path: {sys.path}\")'")
 )
 
 # Initialize Modal app
@@ -72,6 +76,10 @@ def web_app():
     
     # Import LogSense modules
     try:
+        # Add Python Modules to path for analyzer imports
+        import sys
+        sys.path.insert(0, "/root/app/Python Modules")
+        
         from infra.security import sanitize_log_data
         from analysis import parse_log_file
         from analyzer.baseline_analyzer import analyze_events
@@ -81,6 +89,18 @@ def web_app():
     except ImportError as e:
         print(f"[IMPORT_WARNING] {e}")
         cascade_logger = None
+        
+        # Provide fallback functions if imports fail
+        def sanitize_log_data(data):
+            return str(data).replace('<', '&lt;').replace('>', '&gt;')
+        
+        def parse_log_file(file_path):
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+            return [{"timestamp": "unknown", "level": "INFO", "message": line.strip()} for line in lines[:100]]
+        
+        def analyze_events(events):
+            return {"total_events": len(events), "analysis": "Basic analysis - full analyzer not available"}
     
     # Initialize FastAPI app
     fastapi_app = FastAPI(

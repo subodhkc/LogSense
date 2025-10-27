@@ -57,11 +57,26 @@ def web_app():
 
     # Import LogSense modules with error handling
     try:
+        # Add Python Modules to path for analyzer imports
+        sys.path.insert(0, "/root/app/Python Modules")
+        
         from infra.security import sanitize_log_data
         from analysis import parse_log_file
         from analyzer.baseline_analyzer import analyze_events
     except ImportError as e:
         print(f"[STAGING_IMPORT_WARNING] {e}")
+        
+        # Provide fallback functions if imports fail
+        def sanitize_log_data(data):
+            return str(data).replace('<', '&lt;').replace('>', '&gt;')
+        
+        def parse_log_file(file_path):
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+            return [{"timestamp": "unknown", "level": "INFO", "message": line.strip()} for line in lines[:100]]
+        
+        def analyze_events(events):
+            return {"total_events": len(events), "analysis": "Basic analysis - full analyzer not available"}
 
     # Initialize Cascade logger for troubleshooting
     try:
