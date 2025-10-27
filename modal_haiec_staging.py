@@ -6,7 +6,7 @@ import modal
 
 # Staging App Configuration
 APP_NAME = "logsense-staging"
-FUNCTION_NAME = "web-app"
+FUNCTION_NAME = "web_app"
 
 # Minimal staging image with explicit FastAPI pins
 staging_image = (

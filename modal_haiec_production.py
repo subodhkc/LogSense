@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 
 # Production App Configuration
 APP_NAME = "logsense-production"
-FUNCTION_NAME = "web-app"
+FUNCTION_NAME = "web_app"
 
 # Create optimized Modal image for production
 production_image = (
